@@ -1,0 +1,1 @@
+{"name":"CoYatra","private":true,"workspaces":["frontend","backend"],"devDependencies":{"concurrently":"^9.2.1"},"scripts":{"dev":"concurrently \"npm run dev -w frontend\" \"npm run dev -w backend\""}}
