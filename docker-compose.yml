@@ -1,0 +1,25 @@
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: coyatra-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - ${DATA_PATH:-/Users/sagnikguru/Developer/MERN/CoYatra-data}/mongodb:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=coyatra
+
+  localstack:
+    image: localstack/localstack:latest
+    container_name: coyatra-localstack
+    ports:
+      - "4566:4566"            # LocalStack Gateway
+      - "4510-4559:4510-4559"  # external services port range
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ${DATA_PATH:-/Users/sagnikguru/Developer/MERN/CoYatra-data}/localstack:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
