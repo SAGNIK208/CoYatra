@@ -11,8 +11,8 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/trip/:tripId', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), checklistController.getTripItems);
-router.post('/', validate(createChecklistItemSchema), authorize([TripRole.OWNER, TripRole.EDITOR]), checklistController.createItem);
-router.put('/:id', validate(updateChecklistItemSchema), authorize([TripRole.OWNER, TripRole.EDITOR]), checklistController.updateItem);
-router.delete('/:id', authorize([TripRole.OWNER, TripRole.EDITOR]), checklistController.deleteItem);
+router.post('/', validate(createChecklistItemSchema), authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), checklistController.createItem);
+router.put('/:id', validate(updateChecklistItemSchema), authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), checklistController.updateItem);
+router.delete('/:id', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), checklistController.deleteItem);
 
 export default router;

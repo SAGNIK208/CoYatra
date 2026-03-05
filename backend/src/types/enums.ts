@@ -10,6 +10,7 @@ export enum ActivityType {
   STAY = 'STAY',
   FOOD = 'FOOD',
   EVENT = 'EVENT',
+  OTHER = 'OTHER',
 }
 
 export enum CommentContext {

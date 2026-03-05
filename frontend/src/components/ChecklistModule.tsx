@@ -1,180 +1,277 @@
-import { CheckCircle2, Circle, Trash2, User, Paperclip, Filter, Plus, CheckSquare } from "lucide-react";
-import { useState } from "react";
+import { CheckCircle2, Circle, Trash2, User, Paperclip, Filter, Plus, CheckSquare, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { CreateTaskModal } from "./CreateTaskModal";
+import { checklistService } from "../lib/checklistService";
+import { fileService } from "../lib/fileService";
+import { useUser } from "@clerk/clerk-react";
 
 interface ChecklistItem {
   id: string;
   task: string;
   done: boolean;
   assignee?: string;
+  assigneeId?: string;
   hasAttachment?: boolean;
 }
 
-export function ChecklistModule() {
-  const [items, setItems] = useState<ChecklistItem[]>([
-    { id: "1", task: "Book ferry to Mykonos", done: true, assignee: "Sagnik" },
-    { id: "2", task: "Pack swimsuit and sunscreen", done: false, assignee: "Elena" },
-    { id: "3", task: "Confirm dinner at Sunset Grill", done: false },
-    { id: "4", task: "Download offline maps", done: true, assignee: "John", hasAttachment: true },
-  ]);
+export function ChecklistModule({ tripId, members = [] }: { tripId: string; members?: any[] }) {
+  const { user: clerkUser } = useUser();
+  const [items, setItems] = useState<ChecklistItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [filterAssignee, setFilterAssignee] = useState<string>("all");
+  const [isLoading, setIsLoading] = useState(true);
+  const [uploadingTaskId, setUploadingTaskId] = useState<string | null>(null);
 
-  const toggleTask = (id: string) => {
-    setItems(items.map(item => item.id === id ? { ...item, done: !item.done } : item));
+  // Find the database user ID for the current clerk user
+  const currentMember = members.find(m => m.user?.clerkId === clerkUser?.id);
+  const currentDbUserId = currentMember?.user?._id;
+
+  const memberNames = members.map(m => m.user?.name).filter(Boolean) as string[];
+
+  useEffect(() => {
+    const fetchTasks = async () => {
+      try {
+        setIsLoading(true);
+        const data = await checklistService.getByTripId(tripId, filterAssignee);
+        const mapped = data.map((t: any) => ({
+          id: t._id || t.id,
+          task: t.title,
+          done: t.isDone,
+          assignee: t.assignedToUserId?.name || undefined,
+          assigneeId: t.assignedToUserId?._id || t.assignedToUserId || undefined,
+          hasAttachment: t.attachments && t.attachments.length > 0
+        }));
+        setItems(mapped);
+      } catch (error) {
+        console.error("Error fetching checklist:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTasks();
+  }, [tripId, filterAssignee]);
+
+  const toggleTask = async (id: string) => {
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+
+    if (item.assigneeId && item.assigneeId !== currentDbUserId) {
+      alert("Only the assignee can update this task.");
+      return;
+    }
+    
+    try {
+      await checklistService.update(id, { isDone: !item.done });
+      setItems(items.map(i => i.id === id ? { ...i, done: !item.done } : i));
+    } catch (error) {
+      console.error("Error updating task status:", error);
+    }
   };
 
-  const handleCreateTask = (data: { name: string; assignee: string; hasAttachment: boolean }) => {
-    setItems([...items, { 
-      id: Date.now().toString(), 
-      task: data.name, 
-      done: false, 
-      assignee: data.assignee || undefined,
-      hasAttachment: data.hasAttachment
-    }]);
+  const handleFileUpload = async (taskId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const item = items.find(i => i.id === taskId);
+    if (!item) return;
+
+    if (item.assigneeId && item.assigneeId !== currentDbUserId) {
+      alert("Only the assignee can attach files to this assigned task.");
+      return;
+    }
+
+    try {
+      setUploadingTaskId(taskId);
+      const { uploadUrl, fileKey } = await fileService.getUploadUrl(tripId, file.name, file.type);
+      await fileService.uploadToS3(uploadUrl, file);
+      await fileService.confirmUpload({
+        tripId,
+        fileName: file.name,
+        fileKey,
+        fileSize: file.size,
+        mimeType: file.type,
+        checklistItemId: taskId
+      });
+      
+      setItems(items.map(i => i.id === taskId ? { ...i, hasAttachment: true } : i));
+      alert("File uploaded and linked successfully!");
+    } catch (error) {
+      console.error("Upload failed", error);
+    } finally {
+      setUploadingTaskId(null);
+    }
   };
 
-  const removeTask = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
+  const handleCreateTask = async (data: { name: string; assignee: string }) => {
+    try {
+      const selectedMember = members.find(m => m.user?.name === data.assignee);
+      const backendData = {
+        tripId,
+        title: data.name,
+        assignedToUserId: selectedMember?.user?._id
+      };
+      const newTask = await checklistService.create(backendData);
+      
+      setItems([...items, { 
+        id: newTask._id || newTask.id, 
+        task: newTask.title, 
+        done: false, 
+        assignee: data.assignee || undefined,
+        assigneeId: selectedMember?.user?._id,
+        hasAttachment: false
+      }]);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error creating task:", error);
+    }
   };
 
-  const filteredItems = filterAssignee === "all" 
-    ? items 
-    : items.filter(item => item.assignee === filterAssignee);
+  const removeTask = async (id: string) => {
+    try {
+      await checklistService.delete(id);
+      setItems(items.filter(item => item.id !== id));
+    } catch (error) {
+      console.error("Error deleting task:", error);
+    }
+  };
 
   const completedCount = items.filter(i => i.done).length;
   const progress = items.length > 0 ? (completedCount / items.length) * 100 : 0;
 
-  const assignees = ["Sagnik", "John", "Elena"];
+  if (isLoading) return <div className="p-8 text-center text-slate-500 font-medium animate-pulse">Loading checklist...</div>;
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-500">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Progress Header */}
-        <div className="md:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-border">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="font-bold text-slate-900 text-lg">Trip Progress</h3>
-            <span className="text-sm font-bold text-primary">{Math.round(progress)}%</span>
-          </div>
-          <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-primary transition-all duration-1000 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-          <p className="mt-3 text-xs text-slate-500 font-medium">
-            {completedCount} of {items.length} tasks completed
-          </p>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm">
+           <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-bold text-slate-900">Task Completion</h4>
+              <span className="text-xs font-black text-primary bg-blue-50 px-2 py-1 rounded-lg">{Math.round(progress)}%</span>
+           </div>
+           <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-primary transition-all duration-1000 ease-out"
+                style={{ width: `${progress}%` }}
+              />
+           </div>
+           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-4">
+             {completedCount} of {items.length} tasks completed
+           </p>
         </div>
 
-        {/* Global Action Button - Suited place */}
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-primary hover:bg-blue-700 text-white rounded-2xl shadow-lg shadow-primary/20 transition-all flex flex-col items-center justify-center p-6 group h-full"
-        >
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-            <Plus size={24} />
-          </div>
-          <span className="font-bold text-lg">New Task</span>
-          <span className="text-[10px] text-white/60 font-medium uppercase tracking-widest mt-1">Add details & assignee</span>
-        </button>
-      </div>
-
-      {/* Filters Area */}
-      <div className="flex items-center justify-between bg-white px-6 py-4 rounded-xl border border-border shadow-sm">
-        <div className="flex items-center gap-3">
-          <Filter size={16} className="text-slate-400" />
-          <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Filter by</span>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setFilterAssignee("all")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                filterAssignee === "all" ? 'bg-primary text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-              }`}
-            >
-              All Tasks
-            </button>
-            {assignees.map(name => (
-              <button 
-                key={name}
-                onClick={() => setFilterAssignee(name)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  filterAssignee === name ? 'bg-primary text-white shadow-md' : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
-                }`}
-              >
-                {name}
-              </button>
-            ))}
-          </div>
+        <div className="bg-white border border-slate-100 rounded-3xl p-6 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+                <h4 className="text-sm font-bold text-slate-900">Filter Tasks</h4>
+                <p className="text-xs text-slate-500 font-medium">View tasks by assignee</p>
+            </div>
+            <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                <select 
+                    value={filterAssignee}
+                    onChange={(e) => setFilterAssignee(e.target.value)}
+                    className="pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 appearance-none transition-all cursor-pointer"
+                >
+                    <option value="all">All Members</option>
+                    {members.map(m => (
+                      <option key={m.user?._id} value={m.user?._id}>{m.user?.name}</option>
+                    ))}
+                </select>
+            </div>
         </div>
-        <span className="text-xs font-bold text-slate-400">{filteredItems.length} {filteredItems.length === 1 ? 'task' : 'tasks'} found</span>
       </div>
 
-      {/* Checklist Grid */}
-      <div className="space-y-3">
-        {filteredItems.map((item) => (
-          <div 
-            key={item.id} 
-            className="card bg-white shadow-sm flex items-center justify-between py-4 hover:border-primary transition-all group border-border px-6"
+      <div className="bg-white border border-slate-100 rounded-[2.5rem] shadow-sm overflow-hidden">
+        <div className="p-6 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+          <div className="flex items-center gap-3">
+             <div className="p-2 bg-primary rounded-xl text-white shadow-lg shadow-primary/20">
+                <CheckSquare size={18} />
+             </div>
+             <h3 className="font-bold text-slate-900">Essential Checklist</h3>
+          </div>
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-slate-50 text-slate-900 text-xs font-bold rounded-xl border border-slate-100 transition-all shadow-sm"
           >
-            <div 
-              className="flex items-center gap-4 cursor-pointer flex-1"
-              onClick={() => toggleTask(item.id)}
-            >
-              <div className="transition-transform active:scale-90">
-                {item.done ? (
-                  <CheckCircle2 size={24} className="text-secondary shrink-0" />
-                ) : (
-                  <Circle size={24} className="text-slate-200 group-hover:text-primary shrink-0 transition-colors" />
-                )}
-              </div>
-              <div className="flex flex-col">
-                <span className={`font-medium transition-colors ${item.done ? 'text-slate-400 line-through' : 'text-slate-800'}`}>
-                  {item.task}
-                </span>
-                {item.assignee && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center">
-                      <User size={10} className="text-primary" />
-                    </div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{item.assignee}</span>
-                  </div>
-                )}
-              </div>
-            </div>
+            <Plus size={16} /> Add Task
+          </button>
+        </div>
 
-            <div className="flex items-center gap-2">
-              <button 
-                className={`p-2 rounded-lg transition-all ${item.hasAttachment ? 'text-primary bg-blue-50' : 'text-slate-300 hover:text-primary hover:bg-slate-50 opacity-0 group-hover:opacity-100'}`}
-                title="View/Upload attachment"
-              >
-                <Paperclip size={18} />
-              </button>
-              <button 
-                onClick={() => removeTask(item.id)}
-                className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                title="Delete task"
-              >
-                <Trash2 size={18} />
-              </button>
+        <div className="divide-y divide-slate-50">
+          {items.length > 0 ? items.map((item) => (
+            <div key={item.id} className="group flex items-center justify-between p-4 px-6 hover:bg-slate-50/50 transition-all">
+              <div className="flex items-center gap-4 flex-1">
+                <button 
+                  onClick={() => toggleTask(item.id)}
+                  disabled={!!item.assigneeId && item.assigneeId !== currentDbUserId}
+                  className={`transition-colors duration-300 ${item.done ? 'text-primary' : 'text-slate-300 hover:text-slate-400'} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  {item.done ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                </button>
+                <div className="min-w-0">
+                  <p className={`text-sm font-bold transition-all duration-300 ${item.done ? 'text-slate-300 line-through' : 'text-slate-700'}`}>
+                    {item.task}
+                  </p>
+                  <div className="flex items-center gap-3 mt-1">
+                    {item.assignee && (
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-tight">
+                        <User size={10} />
+                        {item.assignee}
+                      </div>
+                    )}
+                    {item.hasAttachment && (
+                      <div className="flex items-center gap-1.5 text-[10px] font-black text-primary uppercase tracking-tight">
+                        <Paperclip size={10} />
+                        Attached
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <label className={`p-2 rounded-lg transition-all cursor-pointer ${
+                  (item.assigneeId && item.assigneeId !== currentDbUserId)
+                    ? 'text-slate-100 cursor-not-allowed'
+                    : 'text-slate-300 hover:text-primary hover:bg-blue-50'
+                }`}>
+                  {uploadingTaskId === item.id ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Paperclip size={16} />
+                  )}
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    disabled={uploadingTaskId === item.id || (!!item.assigneeId && item.assigneeId !== currentDbUserId)}
+                    onChange={(e) => handleFileUpload(item.id, e)}
+                  />
+                </label>
+                <button 
+                  onClick={() => removeTask(item.id)}
+                  disabled={!!item.assigneeId && item.assigneeId !== currentDbUserId}
+                  className="p-2 text-slate-200 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
-        
-        {filteredItems.length === 0 && (
-          <div className="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-200">
-            <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-300">
-              <CheckSquare size={32} />
+          )) : (
+            <div className="p-20 text-center">
+               <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-200">
+                  <CheckSquare size={32} />
+               </div>
+               <p className="text-sm font-bold text-slate-400">No tasks found</p>
+               <button onClick={() => setIsModalOpen(true)} className="text-xs font-black text-primary uppercase mt-2 hover:underline">Create your first task</button>
             </div>
-            <p className="text-slate-400 font-medium">No tasks match your filter.</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       <CreateTaskModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        onCreate={handleCreateTask} 
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreate={handleCreateTask}
+        members={memberNames}
       />
     </div>
   );

@@ -10,11 +10,11 @@ const router = Router();
 
 router.use(requireAuth);
 
-// Generate an invite (Owner only)
+// Generate an invite (Owner/Editor)
 router.post(
   '/generate',
   validate(generateInviteSchema),
-  authorize([TripRole.OWNER]),
+  authorize([TripRole.OWNER, TripRole.EDITOR]),
   inviteController.generateInvite
 );
 
@@ -25,16 +25,23 @@ router.post(
   inviteController.joinTrip
 );
 
-// List active invites for a trip (Owner only)
+// List active invites for a trip (Owner/Editor)
 router.get(
   '/trip/:tripId',
-  authorize([TripRole.OWNER]),
+  authorize([TripRole.OWNER, TripRole.EDITOR]),
   inviteController.getActiveInvites
 );
 
-// Disable an invite token (Owner only)
+// Get details of an invite (Any authenticated user)
+router.get(
+  '/:token',
+  inviteController.getInviteDetails
+);
+
+// Disable an invite token (Owner/Editor)
 router.post(
   '/disable/:token',
+  authorize([TripRole.OWNER, TripRole.EDITOR]),
   inviteController.disableInvite
 );
 

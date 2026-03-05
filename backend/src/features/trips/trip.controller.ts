@@ -11,7 +11,7 @@ import { TripRole } from '../../types/enums';
 export const createTrip = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).auth?.userId || getAuth(req).userId;
-    const { title, description, location, startDate, endDate } = req.body;
+    const { title, description, location, startDateTime, endDateTime, imageUrl, timezone } = req.body;
 
     const user = await User.findOne({ clerkId: userId });
     if (!user) {
@@ -25,8 +25,10 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
       title,
       description,
       location,
-      startDate,
-      endDate,
+      startDateTime,
+      endDateTime,
+      imageUrl,
+      timezone: timezone || 'UTC',
     });
 
     // Add creator as OWNER in TripMember
@@ -56,7 +58,13 @@ export const getMyTrips = async (req: Request, res: Response): Promise<void> => 
 
     // Find all memberships
     const memberships = await TripMember.find({ userId: user._id }).populate('tripId');
-    const trips = memberships.map((m) => m.tripId);
+    const trips = (memberships || [])
+      .filter(m => !!m.tripId)
+      .map((m) => {
+        const trip = (m.tripId as any).toObject();
+        trip.role = m.role;
+        return trip;
+      });
 
     res.status(200).json(trips);
   } catch (error) {
@@ -70,14 +78,32 @@ export const getMyTrips = async (req: Request, res: Response): Promise<void> => 
 export const getTripById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const trip = await Trip.findById(id);
+    const trip = await Trip.findById(id).lean();
 
     if (!trip) {
       res.status(404).json({ error: 'Trip not found' });
       return;
     }
 
-    res.status(200).json(trip);
+    // Attach role if member
+    const userId = (req as any).auth?.userId || getAuth(req).userId;
+    const user = await User.findOne({ clerkId: userId });
+    let role = 'VIEWER';
+    if (user) {
+      const membership = await TripMember.findOne({ tripId: id, userId: user._id });
+      if (membership) {
+        role = membership.role;
+      }
+    }
+
+    // Fetch and populate members
+    const members = await TripMember.find({ tripId: id }).populate('userId', 'name email profilePicUrl clerkId').lean();
+    const formattedMembers = members.map(m => ({
+      ...m,
+      user: m.userId // map to expected frontend structure
+    }));
+
+    res.status(200).json({ ...trip, role, members: formattedMembers });
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }
@@ -132,7 +158,7 @@ export const deleteTrip = async (req: Request, res: Response): Promise<void> => 
 export const getTripMembers = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const members = await TripMember.find({ tripId: id }).populate('userId', 'name email profilePicUrl');
+    const members = await TripMember.find({ tripId: id }).populate('userId', 'name email profilePicUrl clerkId');
     res.status(200).json(members);
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });

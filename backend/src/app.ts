@@ -13,15 +13,15 @@ import mediaRouter from './features/media/media.routes';
 const app: Application = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(cors());
+app.use(cors({
+  origin: process.env['CLIENT_URL'] || 'http://localhost:5173',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use((req: Request, res: Response, next: NextFunction) => {
-  if (process.env['NODE_ENV'] === 'development' && req.headers['x-mock-user-id']) {
-    return next();
-  }
-  return clerkMiddleware()(req, res, next);
-});
+app.use(clerkMiddleware());
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {

@@ -5,8 +5,11 @@ export interface ITrip extends Document {
   title: string;
   description?: string;
   location?: string;
-  startDate: Date;
-  endDate: Date;
+  startDateTime: Date;
+  endDateTime: Date;
+  defaultCurrency: string;
+  timezone: string;
+  imageUrl?: string;
   createdByUserId: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
@@ -30,13 +33,26 @@ const TripSchema = new Schema<ITrip>(
     location: {
       type: String,
     },
-    startDate: {
+    startDateTime: {
       type: Date,
       required: true,
     },
-    endDate: {
+    endDateTime: {
       type: Date,
       required: true,
+    },
+    defaultCurrency: {
+      type: String,
+      required: true,
+      default: 'INR',
+    },
+    timezone: {
+      type: String,
+      required: true,
+      default: 'UTC',
+    },
+    imageUrl: {
+      type: String,
     },
     createdByUserId: {
       type: Schema.Types.ObjectId,

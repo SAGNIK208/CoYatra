@@ -1,30 +1,41 @@
 import { X, DollarSign } from "lucide-react";
 import { useState } from "react";
 
+interface Member {
+  userId: string;
+  name: string;
+}
+
 interface CreateExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (expense: { item: string; amount: number; paidBy: string; sharedWith: string[] }) => void;
-  members: string[];
+  onCreate: (expense: { item: string; amount: number; paidByUserId: string; payeeUserIds: string[] }) => void;
+  members: Member[];
   currencySymbol: string;
 }
 
 export function CreateExpenseModal({ isOpen, onClose, onCreate, members, currencySymbol }: CreateExpenseModalProps) {
   const [item, setItem] = useState("");
   const [amount, setAmount] = useState("");
-  const [paidBy, setPaidBy] = useState(members[0] || "");
-  const [sharedWith, setSharedWith] = useState<string[]>(members);
+  const [paidByUserId, setPaidByUserId] = useState(members[0]?.userId || "");
+  const [sharedWithIds, setSharedWithIds] = useState<string[]>(members.map(m => m.userId));
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!item.trim() || !amount) return;
+    
+    // Ensure paidBy is included in sharedWith
+    const finalSharedWith = sharedWithIds.includes(paidByUserId) 
+      ? sharedWithIds 
+      : [...sharedWithIds, paidByUserId];
+
     onCreate({ 
       item, 
       amount: parseFloat(amount), 
-      paidBy, 
-      sharedWith 
+      paidByUserId, 
+      payeeUserIds: finalSharedWith 
     });
     setItem("");
     setAmount("");
@@ -32,18 +43,18 @@ export function CreateExpenseModal({ isOpen, onClose, onCreate, members, currenc
   };
 
   const toggleSelectAll = () => {
-    if (sharedWith.length === members.length) {
-      setSharedWith([]);
+    if (sharedWithIds.length === members.length) {
+      setSharedWithIds([]);
     } else {
-      setSharedWith(members);
+      setSharedWithIds(members.map(m => m.userId));
     }
   };
 
-  const toggleMember = (member: string) => {
-    if (sharedWith.includes(member)) {
-      setSharedWith(sharedWith.filter(m => m !== member));
+  const toggleMember = (userId: string) => {
+    if (sharedWithIds.includes(userId)) {
+      setSharedWithIds(sharedWithIds.filter(id => id !== userId));
     } else {
-      setSharedWith([...sharedWith, member]);
+      setSharedWithIds([...sharedWithIds, userId]);
     }
   };
 
@@ -95,10 +106,10 @@ export function CreateExpenseModal({ isOpen, onClose, onCreate, members, currenc
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Paid By</label>
               <select 
                 className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-slate-900 appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2014%2014%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M3.5%205.25L7%208.75L10.5%205.25%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E')] bg-[length:14px_14px] bg-[right_1rem_center] bg-no-repeat"
-                value={paidBy}
-                onChange={(e) => setPaidBy(e.target.value)}
+                value={paidByUserId}
+                onChange={(e) => setPaidByUserId(e.target.value)}
               >
-                {members.map(m => <option key={m} value={m}>{m}</option>)}
+                {members.map(m => <option key={m.userId} value={m.userId}>{m.name}</option>)}
               </select>
             </div>
           </div>
@@ -111,7 +122,7 @@ export function CreateExpenseModal({ isOpen, onClose, onCreate, members, currenc
                 onClick={toggleSelectAll}
                 className="text-[10px] font-black text-primary uppercase tracking-widest hover:underline"
               >
-                {sharedWith.length === members.length ? 'Deselect All' : 'Select All'}
+                {sharedWithIds.length === members.length ? 'Deselect All' : 'Select All'}
               </button>
             </div>
 
@@ -120,16 +131,16 @@ export function CreateExpenseModal({ isOpen, onClose, onCreate, members, currenc
               <div className="flex flex-wrap gap-2 pb-2">
                 {members.map((member) => (
                   <button
-                    key={member}
+                    key={member.userId}
                     type="button"
-                    onClick={() => toggleMember(member)}
+                    onClick={() => toggleMember(member.userId)}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                      sharedWith.includes(member)
+                      sharedWithIds.includes(member.userId)
                       ? 'bg-blue-50 text-primary border-primary ring-1 ring-primary/20'
                       : 'bg-slate-50 text-slate-400 border-transparent hover:border-slate-200'
                     }`}
                   >
-                    {member}
+                    {member.name}
                   </button>
                 ))}
               </div>

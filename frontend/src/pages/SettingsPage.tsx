@@ -1,4 +1,4 @@
-import { useUser, UserProfile } from "@clerk/clerk-react";
+import { useUser, UserProfile, useClerk } from "@clerk/clerk-react";
 import { 
   Settings, 
   User, 
@@ -10,48 +10,81 @@ import {
   Globe,
   Heart
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import logo from "../assets/logo.jpg";
+import { userService } from "../lib/userService";
 
 export function SettingsPage() {
-  const { user, isLoaded } = useUser();
+  const { user, isLoaded: isClerkLoaded } = useUser();
+  const { openUserProfile } = useClerk();
   const [activeSection, setActiveSection] = useState<'profile' | 'notifications' | 'security' | 'preferences'>('profile');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Local form state
   const [formData, setFormData] = useState({
-    username: user?.username || "",
-    firstName: user?.firstName || "",
-    lastName: user?.lastName || "",
-    bio: "Passionate traveler and food enthusiast. Always looking for the next hidden gem!",
-    travelStyle: "Luxury / Adventure",
-    homeBase: "San Francisco, CA"
+    firstName: "",
+    lastName: "",
+    bio: "",
+    travelStyle: "",
+    homeBase: ""
   });
 
-  if (!isLoaded) return null;
+  // Fetch backend user data on mount
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const backendUser = await userService.getMe();
+        setFormData({
+          firstName: user?.firstName || "",
+          lastName: user?.lastName || "",
+          bio: backendUser.bio || "",
+          travelStyle: backendUser.travelStyle || "",
+          homeBase: backendUser.homeBase || ""
+        });
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (isClerkLoaded) {
+      fetchUserData();
+    }
+  }, [isClerkLoaded, user]);
+
+  if (!isClerkLoaded || isLoading) return <div className="h-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">Loading settings...</div>;
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     
     try {
-      // Logic for updating profile via Clerk or Backend
-      await user?.update({
+      // 1. Update Clerk profile
+      const clerkUpdateData: any = {
         firstName: formData.firstName,
         lastName: formData.lastName,
-        username: formData.username
+      };
+      
+
+
+      await user?.update(clerkUpdateData);
+      
+      // 2. Update Backend profile
+      await userService.updateMe({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        bio: formData.bio,
+        homeBase: formData.homeBase,
+        travelStyle: formData.travelStyle
       });
       
-      // Additional app-specific data would be saved to our own DB here
-      console.log("Saving app-specific data:", formData);
-      
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
       alert("Profile updated successfully!");
     } catch (err) {
       console.error("Error updating profile:", err);
-      alert("Failed to update profile. Please try again.");
+      alert("Failed to update profile. Please ensure username is unique and try again.");
     } finally {
       setIsSaving(false);
     }
@@ -131,10 +164,9 @@ export function SettingsPage() {
                   </div>
                   <div className="space-y-2">
                     <h4 className="font-bold text-slate-900">Profile Picture</h4>
-                    <p className="text-xs text-slate-400 max-w-[200px] leading-relaxed">JPG, GIF or PNG. Max size 2MB.</p>
+                    <p className="text-xs text-slate-400 max-w-[200px] leading-relaxed">Managed via Clerk Security settings.</p>
                     <div className="flex gap-2 pt-2">
-                      <button type="button" className="text-xs font-bold text-primary px-4 py-2 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all">Update Photo</button>
-                      <button type="button" className="text-xs font-bold text-slate-400 px-4 py-2 hover:text-red-400 transition-all">Remove</button>
+                      <button type="button" onClick={() => openUserProfile()} className="text-xs font-bold text-primary px-4 py-2 bg-blue-50 rounded-xl hover:bg-blue-100 transition-all">Update Photo</button>
                     </div>
                   </div>
                 </div>
@@ -160,18 +192,7 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Username</label>
-                  <div className="relative">
-                    <span className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 font-bold">@</span>
-                    <input 
-                      type="text" 
-                      value={formData.username}
-                      onChange={(e) => setFormData({...formData, username: e.target.value})}
-                      className="w-full pl-10 pr-5 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-bold text-slate-900"
-                    />
-                  </div>
-                </div>
+
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Bio</label>
@@ -215,10 +236,35 @@ export function SettingsPage() {
           {activeSection === 'security' && (
             <div className="p-8 md:p-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
                <h2 className="text-3xl font-black text-slate-900 mb-2">Security & Identity</h2>
-               <p className="text-slate-500 font-medium mb-10">Manage your password and authentication methods via Clerk.</p>
-               <div className="border border-slate-100 rounded-[2rem] overflow-hidden">
-                <UserProfile />
+               <p className="text-slate-500 font-medium mb-10">Manage your password, email, and authentication methods.</p>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                  <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-primary mb-4">
+                      <User size={24} />
+                    </div>
+                    <h4 className="font-bold text-slate-900 mb-2">Account Details</h4>
+                    <p className="text-xs text-slate-500 mb-4">Update your name, email, and profile photo.</p>
+                    <button onClick={() => openUserProfile()} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all">
+                      Manage via Clerk
+                    </button>
+                  </div>
+
+                  <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-100 flex flex-col items-center text-center">
+                    <div className="w-12 h-12 bg-teal-100 rounded-2xl flex items-center justify-center text-teal-600 mb-4">
+                      <Shield size={24} />
+                    </div>
+                    <h4 className="font-bold text-slate-900 mb-2">Password</h4>
+                    <p className="text-xs text-slate-500 mb-4">Change your password or set a new one for email login.</p>
+                    <button onClick={() => openUserProfile()} className="w-full py-3 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-100 transition-all">
+                      Security Settings
+                    </button>
+                  </div>
                </div>
+
+               <div className="border border-slate-100 rounded-[2rem] overflow-hidden opacity-60">
+                 <UserProfile routing="hash" />
+                </div>
             </div>
           )}
 

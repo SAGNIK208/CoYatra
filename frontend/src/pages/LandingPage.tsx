@@ -72,10 +72,9 @@ export function LandingPage() {
           <div className="w-full max-w-[400px] animate-in fade-in slide-in-from-right-4 duration-700">
             {isSignUp ? (
               <SignUp 
-                routing="path" 
-                path="/" 
+                routing="hash"
                 signInUrl="/?mode=signin"
-                afterSignUpUrl="/dashboard"
+                forceRedirectUrl="/dashboard"
                 appearance={{
                   elements: {
                     rootBox: "w-full mx-auto",
@@ -92,10 +91,9 @@ export function LandingPage() {
               />
             ) : (
               <SignIn 
-                routing="path" 
-                path="/" 
+                routing="hash" 
                 signUpUrl="/?mode=signup"
-                afterSignInUrl="/dashboard"
+                forceRedirectUrl="/dashboard"
                 appearance={{
                   elements: {
                     rootBox: "w-full mx-auto",

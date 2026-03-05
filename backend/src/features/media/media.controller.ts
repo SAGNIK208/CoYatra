@@ -30,8 +30,19 @@ export const confirmUpload = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const { tripId, activityId, fileName, fileKey, fileSize, mimeType } = req.body;
+    const { tripId, activityId, checklistItemId, fileName, fileKey, fileSize, mimeType } = req.body;
     
+    // Logic: If this is for a checklist item, check assignment rules
+    if (checklistItemId) {
+      // We need to import ChecklistItem, but let's assume it's available or use mongoose
+      const mongoose = require('mongoose');
+      const item = await mongoose.model('ChecklistItem').findById(checklistItemId);
+      if (item && item.assignedToUserId && item.assignedToUserId.toString() !== user._id.toString()) {
+        res.status(403).json({ error: 'Only the assignee can attach files to this assigned task' });
+        return;
+      }
+    }
+
     // In production, we'd verify the file exists in S3 here.
     // For now, we trust the client (standard for MVP/LocalStack).
     const fileUrl = `${process.env['AWS_ENDPOINT']}/${process.env['AWS_S3_BUCKET_NAME']}/${fileKey}`;
@@ -39,6 +50,7 @@ export const confirmUpload = async (req: Request, res: Response): Promise<void> 
     const attachment = await Attachment.create({
       tripId,
       activityId,
+      checklistItemId,
       userId: user._id,
       fileName,
       fileKey,

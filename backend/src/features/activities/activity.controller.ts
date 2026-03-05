@@ -3,6 +3,8 @@ import mongoose from 'mongoose';
 import { getAuth } from '@clerk/express';
 import { Activity } from './activity.model';
 import { User } from '../users/user.model';
+import { TripMember } from '../trips/models/trip-member.model';
+import { TripRole } from '../../types/enums';
 
 /**
  * Creates a new activity for a trip.
@@ -17,6 +19,27 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    const { tripId, startDateTime, endDateTime } = req.body;
+    
+    // Fetch Trip to validate dates
+    const trip = await mongoose.model('Trip').findById(tripId);
+    if (!trip) {
+      res.status(404).json({ error: 'Trip not found' });
+      return;
+    }
+
+    const activityStart = new Date(startDateTime);
+    const activityEnd = endDateTime ? new Date(endDateTime) : activityStart;
+
+    if (activityStart < trip.startDateTime || activityStart > trip.endDateTime || 
+        activityEnd < trip.startDateTime || activityEnd > trip.endDateTime) {
+      res.status(400).json({ 
+        error: 'Activity must be within trip dates',
+        tripRange: { start: trip.startDateTime, end: trip.endDateTime }
+      });
+      return;
+    }
+
     const activity = await Activity.create({
       ...req.body,
       lastEditedByUserId: user._id,
@@ -24,6 +47,7 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 
     res.status(201).json(activity);
   } catch (error) {
+    console.error('Error creating activity:', error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -55,6 +79,37 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    const existingActivity = await Activity.findById(id);
+    if (!existingActivity) {
+      res.status(404).json({ error: 'Activity not found' });
+      return;
+    }
+
+    // Check permissions
+    const membership = await TripMember.findOne({ tripId: existingActivity.tripId, userId: user._id });
+    if (!membership || (membership.role !== TripRole.OWNER && membership.role !== TripRole.EDITOR)) {
+      res.status(403).json({ error: 'Permission denied' });
+      return;
+    }
+
+    // If dates are being updated, validate against trip range
+    if (req.body.startDateTime || req.body.endDateTime) {
+      const trip = await mongoose.model('Trip').findById(existingActivity.tripId);
+      if (trip) {
+        const activityStart = new Date(req.body.startDateTime || existingActivity.startDateTime);
+        const activityEnd = new Date(req.body.endDateTime || activityStart);
+
+        if (activityStart < trip.startDateTime || activityStart > trip.endDateTime || 
+            activityEnd < trip.startDateTime || activityEnd > trip.endDateTime) {
+          res.status(400).json({ 
+            error: 'Activity must be within trip dates',
+            tripRange: { start: trip.startDateTime, end: trip.endDateTime }
+          });
+          return;
+        }
+      }
+    }
+
     const activity = await Activity.findByIdAndUpdate(
       id,
       { 
@@ -83,12 +138,28 @@ export const updateActivity = async (req: Request, res: Response): Promise<void>
 export const deleteActivity = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    const activity = await Activity.findByIdAndDelete(id);
+    const userId = (req as any).auth?.userId || getAuth(req).userId;
+    const user = await User.findOne({ clerkId: userId });
 
+    if (!user) {
+      res.status(404).json({ error: 'User not found' });
+      return;
+    }
+
+    const activity = await Activity.findById(id);
     if (!activity) {
       res.status(404).json({ error: 'Activity not found' });
       return;
     }
+
+    // Check permissions
+    const membership = await TripMember.findOne({ tripId: activity.tripId, userId: user._id });
+    if (!membership || (membership.role !== TripRole.OWNER && membership.role !== TripRole.EDITOR)) {
+      res.status(403).json({ error: 'Permission denied' });
+      return;
+    }
+
+    await Activity.findByIdAndDelete(id);
 
     res.status(204).send();
   } catch (error) {

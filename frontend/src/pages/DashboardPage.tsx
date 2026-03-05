@@ -5,49 +5,47 @@ import logo from "../assets/logo.jpg";
 import { Link, useNavigate } from "react-router-dom";
 import { TripCard } from "../components/TripCard";
 import { CreateTripModal } from "../components/CreateTripModal";
+import { tripService } from "../lib/tripService";
+import { useEffect } from "react";
 
 export function DashboardPage() {
   const { user } = useUser();
   const navigate = useNavigate();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [trips, setTrips] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // High-fidelity mock data
-  const trips = [
-    {
-      id: '1',
-      title: 'Summer in Santorini',
-      startDate: 'Aug 10',
-      endDate: 'Aug 20',
-      memberCount: 4,
-      role: 'OWNER' as const,
-      imageUrl: 'https://images.unsplash.com/photo-1570077188670-e3a8d69ac5ff?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      id: '2',
-      title: 'Tokyo Food Tour',
-      startDate: 'Oct 05',
-      endDate: 'Oct 15',
-      memberCount: 3,
-      role: 'EDITOR' as const,
-      imageUrl: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=400&q=80'
-    },
-    {
-      id: '3',
-      title: 'Zermatt Ski Trip',
-      startDate: 'Dec 15',
-      endDate: 'Dec 22',
-      memberCount: 6,
-      role: 'VIEWER' as const,
-      imageUrl: 'https://images.unsplash.com/photo-1540304453527-62f979142a17?auto=format&fit=crop&w=400&q=80'
+  useEffect(() => {
+    const fetchTrips = async () => {
+      try {
+        const data = await tripService.getAll();
+        setTrips(Array.isArray(data) ? data : []);
+      } catch (error) {
+        console.error("Error fetching trips:", error);
+        setTrips([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTrips();
+  }, []);
+
+  const handleCreateTrip = async (data: any) => {
+    try {
+      const newTrip = await tripService.create(data);
+      if (newTrip) {
+        setTrips(prev => [newTrip, ...prev]);
+        setIsCreateModalOpen(false);
+        navigate(`/trips/${newTrip.id || newTrip._id}`);
+      }
+    } catch (error) {
+      console.error("Error creating trip:", error);
+      alert("Failed to create trip. Please try again.");
     }
-  ];
-
-  const handleCreateTrip = (data: any) => {
-    console.log("Creating trip:", data);
-    // Simulate navigation to new workspace
-    navigate(`/trips/new-trip-id`);
   };
+
+  if (isLoading) return <div className="h-screen flex items-center justify-center">Loading...</div>;
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -115,15 +113,26 @@ export function DashboardPage() {
           <div className="mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
               <h2 className="text-3xl font-bold text-slate-900 mb-2">Welcome back, {user?.firstName || 'Traveler'}!</h2>
-              <p className="text-slate-500">You have {trips.length} active trips planned.</p>
+              <p className="text-slate-500">You have {trips?.length || 0} active trips planned.</p>
             </div>
           </div>
 
           {/* Trip Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {trips.map(trip => (
-              <TripCard key={trip.id} {...trip} />
-            ))}
+              {trips.map((trip: any) => (
+                <TripCard
+                  key={trip.id || trip._id}
+                  id={trip.id || trip._id}
+                  title={trip.title}
+                  startDateTime={trip.startDateTime}
+                  endDateTime={trip.endDateTime}
+                  timezone={trip.timezone}
+                  location={trip.location}
+                  memberCount={trip.memberCount || 1}
+                  role={trip.role || "OWNER"}
+                  imageUrl={trip.imageUrl}
+                />
+              ))}
             
             {/* Create New Static Card */}
             <div 

@@ -86,6 +86,10 @@ export const joinTrip = async (req: Request, res: Response): Promise<void> => {
         role: invite.role,
         addedByUserId: invite.createdByUserId,
       });
+
+      // Consume the invite
+      invite.status = InviteStatus.ACCEPTED;
+      await invite.save();
     } catch (err: any) {
       if (err.code === 11000) {
         // Already a member
@@ -109,6 +113,39 @@ export const getActiveInvites = async (req: Request, res: Response): Promise<voi
     const { tripId } = req.params;
     const invites = await TripInvite.find({ tripId, status: InviteStatus.PENDING });
     res.status(200).json(invites);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+/**
+ * Gets details of a pending invite without joining.
+ */
+export const getInviteDetails = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { token } = req.params;
+
+    const invite = await TripInvite.findOne({ token, status: InviteStatus.PENDING })
+      .populate('tripId', 'title destination startDateTime endDateTime timezone')
+      .populate('createdByUserId', 'name');
+
+    if (!invite) {
+      res.status(404).json({ error: 'Invalid or spent invite link' });
+      return;
+    }
+
+    if (invite.expiresAt && invite.expiresAt < new Date()) {
+      invite.status = InviteStatus.DISABLED;
+      await invite.save();
+      res.status(410).json({ error: 'Invite link has expired' });
+      return;
+    }
+
+    res.status(200).json({
+      role: invite.role,
+      trip: invite.tripId,
+      owner: (invite.createdByUserId as any)?.name || 'Someone',
+    });
   } catch (error) {
     res.status(500).json({ error: 'Internal Server Error' });
   }

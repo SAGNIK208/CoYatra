@@ -3,6 +3,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 export interface IAttachment extends Document {
   tripId: Types.ObjectId;
   activityId?: Types.ObjectId;
+  checklistItemId?: Types.ObjectId;
   userId: Types.ObjectId;
   fileName: string;
   fileKey: string;
@@ -24,6 +25,11 @@ const AttachmentSchema = new Schema<IAttachment>(
     activityId: {
       type: Schema.Types.ObjectId,
       ref: 'Activity',
+      index: true,
+    },
+    checklistItemId: {
+      type: Schema.Types.ObjectId,
+      ref: 'ChecklistItem',
       index: true,
     },
     userId: {

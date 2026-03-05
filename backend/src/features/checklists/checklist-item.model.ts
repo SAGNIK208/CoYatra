@@ -2,7 +2,7 @@ import { Schema, model, Document, Types } from 'mongoose';
 
 export interface IChecklistItem extends Document {
   tripId: Types.ObjectId;
-  description: string;
+  title: string;
   assignedToUserId?: Types.ObjectId;
   isDone: boolean;
   dueDate?: Date;
@@ -20,7 +20,7 @@ const ChecklistItemSchema = new Schema<IChecklistItem>(
       required: true,
       index: true,
     },
-    description: {
+    title: {
       type: String,
       required: true,
     },

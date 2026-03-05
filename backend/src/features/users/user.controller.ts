@@ -49,11 +49,26 @@ export const getProfileUploadUrl = async (req: Request, res: Response): Promise<
 export const updateMe = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).auth?.userId || getAuth(req).userId;
-    const { name, phone, profilePicUrl } = req.body;
+    const { name, firstName, lastName, phone, profilePicUrl, bio, homeBase, travelStyle } = req.body;
+
+    // Use firstName/lastName if name is not provided
+    const combinedName = name || (firstName || lastName ? `${firstName || ''} ${lastName || ''}`.trim() : undefined);
+
+    // Sanitize: Treat empty strings as undefined so they aren't stored as empty strings in DB
+    const sanitize = (val: any) => (val === "" ? undefined : val);
 
     const user = await User.findOneAndUpdate(
       { clerkId: userId },
-      { $set: { name, phone, profilePicUrl } },
+      { 
+        $set: { 
+          name: combinedName, 
+          phone: sanitize(phone), 
+          profilePicUrl: sanitize(profilePicUrl), 
+          bio: sanitize(bio), 
+          homeBase: sanitize(homeBase), 
+          travelStyle: sanitize(travelStyle) 
+        } 
+      },
       { new: true }
     );
 
@@ -83,7 +98,7 @@ export const syncUser = async (req: Request, res: Response): Promise<void> => {
         $set: { 
           email, 
           name: name || undefined, 
-          profilePicUrl: profilePicUrl || undefined 
+          profilePicUrl: profilePicUrl === "" ? undefined : profilePicUrl 
         } 
       },
       { upsert: true, new: true }

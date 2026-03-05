@@ -5,11 +5,14 @@ export const createTripSchema = z.object({
     title: z.string().min(1, 'Title is required').max(100),
     description: z.string().max(500).optional(),
     location: z.string().max(100).optional(),
-    startDate: z.string().transform((val) => new Date(val)),
-    endDate: z.string().transform((val) => new Date(val)),
-  }).refine((data) => data.endDate >= data.startDate, {
+    startDateTime: z.string().transform((val) => new Date(val)),
+    endDateTime: z.string().transform((val) => new Date(val)),
+    defaultCurrency: z.string().default('INR'),
+    timezone: z.string().min(1, 'Timezone is required'),
+    imageUrl: z.string().url().optional(),
+  }).refine((data) => data.endDateTime >= data.startDateTime, {
     message: "End date must be after start date",
-    path: ["endDate"],
+    path: ["endDateTime"],
   }),
 });
 
@@ -18,16 +21,18 @@ export const updateTripSchema = z.object({
     title: z.string().min(1).max(100).optional(),
     description: z.string().max(500).optional(),
     location: z.string().max(100).optional(),
-    startDate: z.string().transform((val) => new Date(val)).optional(),
-    endDate: z.string().transform((val) => new Date(val)).optional(),
+    startDateTime: z.string().transform((val) => new Date(val)).optional(),
+    endDateTime: z.string().transform((val) => new Date(val)).optional(),
+    timezone: z.string().optional(),
+    imageUrl: z.string().url().optional(),
   }).refine((data) => {
-    if (data.startDate && data.endDate) {
-      return data.endDate >= data.startDate;
+    if (data.startDateTime && data.endDateTime) {
+      return data.endDateTime >= data.startDateTime;
     }
     return true;
   }, {
     message: "End date must be after start date",
-    path: ["endDate"],
+    path: ["endDateTime"],
   }),
 });
 

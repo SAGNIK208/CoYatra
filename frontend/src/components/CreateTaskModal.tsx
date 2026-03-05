@@ -1,26 +1,25 @@
-import { X, User, Paperclip, CheckSquare } from "lucide-react";
+import { X, User, CheckSquare } from "lucide-react";
 import { useState } from "react";
 
 interface CreateTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (task: { name: string; assignee: string; hasAttachment: boolean }) => void;
+  onCreate: (task: { name: string; assignee: string }) => void;
+  members: string[];
 }
 
-export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalProps) {
+export function CreateTaskModal({ isOpen, onClose, onCreate, members }: CreateTaskModalProps) {
   const [name, setName] = useState("");
   const [assignee, setAssignee] = useState("");
-  const [hasAttachment, setHasAttachment] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    onCreate({ name, assignee, hasAttachment });
+    onCreate({ name, assignee });
     setName("");
     setAssignee("");
-    setHasAttachment(false);
     onClose();
   };
 
@@ -57,7 +56,7 @@ export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalPr
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assignee</label>
               <div className="relative">
@@ -68,27 +67,11 @@ export function CreateTaskModal({ isOpen, onClose, onCreate }: CreateTaskModalPr
                   onChange={(e) => setAssignee(e.target.value)}
                 >
                   <option value="">Unassigned</option>
-                  <option value="Sagnik">Sagnik</option>
-                  <option value="John">John</option>
-                  <option value="Elena">Elena</option>
+                  {members.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
                 </select>
               </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Attachment</label>
-              <button
-                type="button"
-                onClick={() => setHasAttachment(!hasAttachment)}
-                className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl border transition-all font-medium ${
-                  hasAttachment 
-                    ? 'bg-blue-50 border-primary text-primary shadow-sm' 
-                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-300'
-                }`}
-              >
-                <Paperclip size={18} />
-                <span>{hasAttachment ? 'Selected' : 'Add File'}</span>
-              </button>
             </div>
           </div>
 

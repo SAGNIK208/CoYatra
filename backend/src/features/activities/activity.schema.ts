@@ -18,6 +18,8 @@ export const createActivitySchema = z.object({
     googlePlaceId: z.string().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
+    category: z.string().optional(),
+    cost: z.string().optional(),
     order: z.number().int().default(0),
   }),
 });
@@ -38,6 +40,8 @@ export const updateActivitySchema = z.object({
     googlePlaceId: z.string().optional(),
     latitude: z.number().optional(),
     longitude: z.number().optional(),
+    category: z.string().optional(),
+    cost: z.string().optional(),
     order: z.number().int().optional(),
   }),
 });

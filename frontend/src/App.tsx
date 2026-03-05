@@ -5,6 +5,7 @@ import { TripWorkspacePage } from "@/pages/TripWorkspacePage";
 import { JoinTripPage } from "@/pages/JoinTripPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { RedirectToSignIn, SignedIn, SignedOut } from "@clerk/clerk-react";
+import { AuthProxy } from "./components/AuthProxy";
 
 function App() {
   return (
@@ -16,7 +17,9 @@ function App() {
           element={
             <>
               <SignedIn>
-                <DashboardPage />
+                <AuthProxy>
+                  <DashboardPage />
+                </AuthProxy>
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />
@@ -29,7 +32,9 @@ function App() {
           element={
             <>
               <SignedIn>
-                <TripWorkspacePage />
+                <AuthProxy>
+                  <TripWorkspacePage />
+                </AuthProxy>
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />
@@ -42,7 +47,9 @@ function App() {
           element={
             <>
               <SignedIn>
-                <JoinTripPage />
+                <AuthProxy>
+                  <JoinTripPage />
+                </AuthProxy>
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />
@@ -55,7 +62,9 @@ function App() {
           element={
             <>
               <SignedIn>
-                <SettingsPage />
+                <AuthProxy>
+                  <SettingsPage />
+                </AuthProxy>
               </SignedIn>
               <SignedOut>
                 <RedirectToSignIn />

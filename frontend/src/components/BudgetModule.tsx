@@ -1,6 +1,10 @@
-import { Wallet, TrendingUp, ArrowUpRight, ArrowDownRight, Plus, Check, Info, RotateCcw, Globe } from "lucide-react";
-import { useState } from "react";
+import { Wallet, TrendingUp, Plus, Check, Info, Globe, Users, CreditCard } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
 import { CreateExpenseModal } from "./CreateExpenseModal";
+import { SplitDetailsModal } from "./SplitDetailsModal";
+import { financeService } from "../lib/financeService";
+import { tripService } from "../lib/tripService";
+import { useUser } from "@clerk/clerk-react";
 
 interface Expense {
   id: string;
@@ -9,7 +13,13 @@ interface Expense {
   date: string;
   status: 'Pending' | 'Paid' | 'Settled';
   paidBy: string;
-  sharedWith: string[];
+  paidByUserId: string;
+  payees: {
+    userId: string;
+    name: string;
+    amount: number;
+    isPaid: boolean;
+  }[];
 }
 
 const CURRENCIES = [
@@ -22,69 +32,141 @@ const CURRENCIES = [
     { symbol: "¤", code: "OTHER", name: "Other Currency" },
 ];
 
-export function BudgetModule() {
-  const members = [
-    "Sagnik Guru", 
-    "John Doe", 
-    "Elena Smith-Rodriguez", 
-    "Marcus Aurelius Antoninus", 
-    "Sarah Connor", 
-    "David", "Yuki", "Amara", "Lucas", "Sophie"
-  ];
-
-  const [currency, setCurrency] = useState(CURRENCIES[1]); // Default Euro
-  const [expenses, setExpenses] = useState<Expense[]>([
-    { 
-      id: "1", 
-      item: "International Flight Tickets (Business Class)", 
-      amount: 1450, 
-      date: "Aug 1", 
-      status: "Paid", 
-      paidBy: "Marcus Aurelius Antoninus", 
-      sharedWith: ["Sagnik Guru", "John Doe", "Elena Smith-Rodriguez", "Marcus Aurelius Antoninus", "Sarah Connor"] 
-    },
-    { 
-      id: "2", 
-      item: "Luxury Villa Booking with Private Pool", 
-      amount: 4200, 
-      date: "Aug 2", 
-      status: "Pending", 
-      paidBy: "Elena Smith-Rodriguez", 
-      sharedWith: ["John Doe", "Elena Smith-Rodriguez", "Marcus Aurelius Antoninus"] 
-    },
-    { 
-        id: "3", 
-        item: "Fine Dining Experience at Oia (Highly Recommended)", 
-        amount: 850, 
-        date: "Aug 3", 
-        status: "Settled", 
-        paidBy: "Sagnik Guru", 
-        sharedWith: [...members] 
-      },
-  ]);
+export function BudgetModule({ tripId }: { tripId: string }) {
+  const { user } = useUser();
+  const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currency, setCurrency] = useState(CURRENCIES[2]); // Default INR
+  const [trip, setTrip] = useState<any>(null);
 
-  const totalBudget = 10000;
-  const spentSoFar = expenses.reduce((sum, exp) => sum + exp.amount, 0);
-  const remaining = totalBudget - spentSoFar;
+  // Fetch expenses and trip details
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [expenseData, tripData] = await Promise.all([
+          financeService.getByTripId(tripId),
+          tripService.getById(tripId)
+        ]);
 
-  const handleAddExpense = (data: { item: string; amount: number; paidBy: string; sharedWith: string[] }) => {
-    setExpenses([...expenses, {
-      id: Date.now().toString(),
-      item: data.item,
-      amount: data.amount,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      status: "Pending",
-      paidBy: data.paidBy,
-      sharedWith: data.sharedWith
-    }]);
+        setTrip(tripData);
+        if (tripData.defaultCurrency) {
+          const found = CURRENCIES.find(c => c.code === tripData.defaultCurrency);
+          if (found) setCurrency(found);
+        }
+
+        const mapped = expenseData.map((e: any) => ({
+          id: e._id || e.id,
+          item: e.title,
+          amount: e.amount,
+          date: new Date(e.createdAt || new Date()).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          status: e.status || "Pending",
+          paidBy: e.paidByUserId?.name || "Unknown",
+          paidByUserId: e.paidByUserId?._id || e.paidByUserId,
+          payees: e.payees?.map((p: any) => ({
+            userId: p.user?._id || p.user,
+            name: p.user?.name || "Unknown",
+            amount: p.amount,
+            isPaid: p.isPaid
+          })) || []
+        }));
+        setExpenses(mapped);
+      } catch (error) {
+        console.error("Error fetching budget data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [tripId]);
+
+  // Get current user's database ID
+  const currentUserId = useMemo(() => {
+    if (!user) return "";
+    return trip?.members?.find((m: any) => m.user?.clerkId === user.id)?.user?._id || "";
+  }, [user, trip]);
+
+  // "Total Spent" is the sum of all expenses committed
+  const totalSpent = useMemo(() => expenses.reduce((sum, exp) => sum + exp.amount, 0), [expenses]);
+  
+  // "Settled by You" is your share of total spent (only if marked as paid)
+  const personalSpent = useMemo(() => {
+     if (!currentUserId) return 0;
+     return expenses.reduce((sum, exp) => {
+       const myShare = exp.payees.find(p => p.userId === currentUserId);
+       return sum + (myShare?.isPaid ? myShare.amount : 0);
+     }, 0);
+  }, [expenses, currentUserId]);
+
+  const handleAddExpense = async (data: { item: string; amount: number; paidByUserId: string; payeeUserIds: string[] }) => {
+    try {
+      const perPersonAmount = data.amount / (data.payeeUserIds.length || 1);
+
+      const backendData = {
+        tripId,
+        title: data.item,
+        amount: data.amount,
+        currency: currency.code,
+        status: "Pending",
+        paidByUserId: data.paidByUserId,
+        payees: data.payeeUserIds,
+        splitType: 'Equal'
+      };
+      
+      const newExpense = await financeService.create(backendData);
+      
+      const paidByMember = trip?.members?.find((m: any) => m.user?._id === data.paidByUserId);
+      const payeeMembersList = data.payeeUserIds.map(id => 
+        trip?.members?.find((m: any) => m.user?._id === id)
+      ).filter(Boolean);
+
+      const mapped: Expense = {
+        id: newExpense._id || newExpense.id,
+        item: newExpense.title,
+        amount: newExpense.amount,
+        date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        status: "Pending",
+        paidBy: paidByMember?.user?.name || "Unknown",
+        paidByUserId: data.paidByUserId,
+        payees: payeeMembersList.map(m => ({
+          userId: m.user?._id,
+          name: m.user?.name,
+          amount: perPersonAmount,
+          isPaid: m.user?._id === data.paidByUserId // Always auto-paid by the payer
+        }))
+      };
+      
+      setExpenses([mapped, ...expenses]);
+      setIsModalOpen(false);
+    } catch (error) {
+      console.error("Error adding expense:", error);
+      alert("Failed to add expense.");
+    }
   };
 
-  const handleStatusUpdate = (id: string, newStatus: 'Pending' | 'Paid' | 'Settled') => {
-    setExpenses(expenses.map(exp => 
-      exp.id === id ? { ...exp, status: newStatus } : exp
-    ));
+  const handlePayeeUpdate = (expenseId: string, userId: string, isPaid: boolean) => {
+    setExpenses(prev => prev.map(exp => {
+      if (exp.id !== expenseId) return exp;
+      const newPayees = exp.payees.map(p => 
+        p.userId === userId ? { ...p, isPaid } : p
+      );
+      // Update overall status
+      const allPaid = newPayees.every(p => p.isPaid);
+      const overallStatus = allPaid ? 'Settled' : (newPayees.some(p => p.isPaid) ? 'Paid' : 'Pending');
+      
+      const updatedExp = { ...exp, payees: newPayees, status: overallStatus as any };
+      if (selectedExpense?.id === expenseId) setSelectedExpense(updatedExp);
+      return updatedExp;
+    }));
   };
+
+  const members = trip?.members?.map((m: any) => ({
+    userId: m.user?._id,
+    name: m.user?.name
+  })).filter((m: any) => m.userId && m.name) || [];
+
+  if (isLoading) return <div className="p-8 text-center text-slate-500 font-medium animate-pulse">Loading budget...</div>;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -104,7 +186,10 @@ export function BudgetModule() {
                 <div className="relative">
                     <select 
                         value={currency.code}
-                        onChange={(e) => setCurrency(CURRENCIES.find(c => c.code === e.target.value) || CURRENCIES[1])}
+                        onChange={(e) => {
+                          const c = CURRENCIES.find(curr => curr.code === e.target.value) || CURRENCIES[2];
+                          setCurrency(c);
+                        }}
                         className="pl-9 pr-8 py-2.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary/20 appearance-none transition-all cursor-pointer"
                     >
                         {CURRENCIES.map(c => (
@@ -130,31 +215,22 @@ export function BudgetModule() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card bg-white shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-sm font-medium text-slate-500 mb-1">Total Budget</p>
+          <p className="text-sm font-medium text-slate-500 mb-1">Total Spent</p>
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-slate-900">{currency.symbol}{totalBudget.toLocaleString()}</h3>
+            <h3 className="text-2xl font-bold text-slate-900 uppercase">{currency.symbol}{totalSpent.toLocaleString()}</h3>
             <div className="p-2 bg-blue-50 rounded-lg">
               <TrendingUp className="text-primary" size={20} />
             </div>
           </div>
         </div>
         <div className="card bg-white shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-sm font-medium text-slate-500 mb-1">Spent So Far</p>
+          <p className="text-sm font-medium text-slate-500 mb-1">Settled by You</p>
           <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-slate-900">{currency.symbol}{spentSoFar.toLocaleString()}</h3>
-            <div className="p-2 bg-red-50 rounded-lg">
-              <ArrowUpRight className="text-red-500" size={20} />
-            </div>
-          </div>
-        </div>
-        <div className="card bg-white shadow-sm hover:shadow-md transition-shadow">
-          <p className="text-sm font-medium text-slate-500 mb-1">Remaining</p>
-          <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-slate-900">{currency.symbol}{remaining.toLocaleString()}</h3>
+            <h3 className="text-2xl font-bold text-slate-900 uppercase">{currency.symbol}{personalSpent.toLocaleString()}</h3>
             <div className="p-2 bg-teal-50 rounded-lg">
-              <ArrowDownRight className="text-secondary" size={20} />
+              <CreditCard className="text-secondary" size={20} />
             </div>
           </div>
         </div>
@@ -209,72 +285,42 @@ export function BudgetModule() {
                     </div>
                   </td>
                   <td className="px-6 py-6">
-                    <div className="flex items-center gap-1.5 flex-wrap max-w-[180px]">
-                      {exp.sharedWith.length === members.length ? (
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-2 py-1 rounded-md mb-1">Everyone</span>
-                      ) : exp.sharedWith.length > 3 ? (
-                        <>
-                          {exp.sharedWith.slice(0, 3).map(m => (
-                            <div key={m} className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 border border-white mb-1" title={m}>
-                              {m[0]}
-                            </div>
-                          ))}
-                          <div className="w-6 h-6 rounded-lg bg-slate-50 flex items-center justify-center text-[9px] font-bold text-slate-400 border border-white mb-1">
-                            +{exp.sharedWith.length - 3}
-                          </div>
-                        </>
-                      ) : (
-                        exp.sharedWith.map(m => (
-                          <div key={m} className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 border border-white mb-1" title={m}>
-                            {m[0]}
-                          </div>
-                        ))
-                      )}
+                    <div className="flex items-center gap-2">
+                       <div className="p-1.5 bg-slate-50 rounded-lg text-slate-400">
+                         <Users size={14} />
+                       </div>
+                       <span className="text-xs font-bold text-slate-600">
+                         {exp.payees.length === members.length ? 'Everyone' : `${exp.payees.length} Members`}
+                       </span>
                     </div>
                   </td>
                   <td className="px-6 py-6 text-right whitespace-nowrap">
                     <div className="flex flex-col items-end">
                       <p className="font-black text-slate-900 leading-tight">{currency.symbol}{exp.amount.toLocaleString()}</p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">{currency.symbol}{(exp.amount / exp.sharedWith.length).toFixed(2)} / each</p>
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight mt-0.5">
+                        {currency.symbol}{(exp.amount / (exp.payees.length || 1)).toFixed(2)} / each
+                      </p>
                     </div>
                   </td>
                   <td className="px-6 py-6 text-center min-w-[140px]">
-                    {exp.status === 'Settled' ? (
-                      <span className="inline-flex items-center gap-1.5 text-[9px] font-black px-3 py-1.5 rounded-lg border uppercase tracking-widest bg-blue-50 text-primary border-blue-100">
-                        <Check size={10} strokeWidth={3} />
-                        {exp.status}
-                      </span>
-                    ) : exp.status === 'Paid' ? (
-                        <div className="flex flex-col gap-2 items-center">
-                            <span className="inline-flex items-center gap-1.5 text-[9px] font-black px-3 py-1.5 rounded-lg border uppercase tracking-widest bg-teal-50 text-secondary border-teal-100">
-                                <Check size={10} strokeWidth={3} />
-                                {exp.status}
-                            </span>
-                            <div className="flex items-center gap-3">
-                                <button 
-                                    onClick={() => handleStatusUpdate(exp.id, 'Pending')}
-                                    className="p-1.5 text-slate-300 hover:text-amber-500 transition-colors group/undo flex items-center gap-1"
-                                    title="Undo Mark as Paid"
-                                >
-                                    <RotateCcw size={12} />
-                                    <span className="text-[8px] font-black uppercase tracking-tighter hidden group-hover/undo:inline">Undo</span>
-                                </button>
-                                <button 
-                                    onClick={() => handleStatusUpdate(exp.id, 'Settled')}
-                                    className="text-[9px] font-black text-primary hover:text-blue-700 transition-colors uppercase tracking-widest"
-                                >
-                                    Settle
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
+                    <div className="flex flex-col gap-1.5 items-center">
                       <button 
-                        onClick={() => handleStatusUpdate(exp.id, 'Paid')}
-                        className="text-[10px] font-black text-white bg-primary hover:bg-blue-700 px-4 py-2 rounded-xl transition-all shadow-md shadow-primary/20 uppercase tracking-widest"
+                        onClick={() => setSelectedExpense(exp)}
+                        className={`inline-flex items-center gap-1.5 text-[9px] font-black px-3 py-1.5 rounded-lg border uppercase tracking-widest transition-all hover:scale-105 ${
+                          exp.status === 'Settled' 
+                          ? 'bg-blue-50 text-primary border-blue-100'
+                          : exp.status === 'Paid'
+                          ? 'bg-teal-50 text-secondary border-teal-100'
+                          : 'bg-white text-slate-400 border-slate-200 shadow-sm'
+                        }`}
                       >
-                        Mark as Paid
+                        {exp.status === 'Settled' || exp.status === 'Paid' ? <Check size={10} strokeWidth={3} /> : null}
+                        {exp.status}
                       </button>
-                    )}
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                        {exp.payees.filter(p => p.isPaid).length}/{exp.payees.length} Paid
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -290,6 +336,19 @@ export function BudgetModule() {
         members={members}
         currencySymbol={currency.symbol}
       />
+
+      {selectedExpense && (
+        <SplitDetailsModal
+          isOpen={!!selectedExpense}
+          onClose={() => setSelectedExpense(null)}
+          expense={{
+            ...selectedExpense,
+            currencySymbol: currency.symbol
+          }}
+          currentUserId={currentUserId}
+          onUpdate={(userId, isPaid) => handlePayeeUpdate(selectedExpense.id, userId, isPaid)}
+        />
+      )}
     </div>
   );
 }

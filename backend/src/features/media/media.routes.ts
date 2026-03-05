@@ -15,17 +15,17 @@ router.get('/trip/:tripId', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole
 router.post(
   '/upload-url',
   validate(getPresignedUrlSchema),
-  authorize([TripRole.OWNER, TripRole.EDITOR]),
+  authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]),
   mediaController.getUploadUrl
 );
 
 router.post(
   '/confirm',
   validate(confirmUploadSchema),
-  authorize([TripRole.OWNER, TripRole.EDITOR]),
+  authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]),
   mediaController.confirmUpload
 );
 
-router.delete('/:id', authorize([TripRole.OWNER, TripRole.EDITOR]), mediaController.deleteAttachment);
+router.delete('/:id', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), mediaController.deleteAttachment);
 
 export default router;

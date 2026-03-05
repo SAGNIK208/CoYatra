@@ -11,6 +11,8 @@ export interface IActivity extends Document {
   // Timing
   startDateTime: Date;
   endDateTime?: Date;
+  category?: string; // Adventure, Food, Relaxation, Culture, Travel, Sightseeing, Other
+  cost?: string;     // Friendly cost string for calendar
   timezone: string;
   isAllDay: boolean;
 
@@ -63,6 +65,12 @@ const ActivitySchema = new Schema<IActivity>(
     },
     endDateTime: {
       type: Date,
+    },
+    category: {
+      type: String,
+    },
+    cost: {
+      type: String,
     },
     timezone: {
       type: String,

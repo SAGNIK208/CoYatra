@@ -1,18 +1,21 @@
-import { Calendar, MapPin, Users } from "lucide-react";
+import { MapPin, Users, Calendar } from "lucide-react";
+import { DateTime } from "luxon";
 import { Link } from "react-router-dom";
 
 interface TripCardProps {
   id: string;
   title: string;
-  startDate: string;
-  endDate: string;
-  destination?: string;
+  startDateTime: string;
+  endDateTime: string;
+  timezone?: string;
+  location?: string;
   memberCount: number;
   role: 'OWNER' | 'EDITOR' | 'VIEWER';
   imageUrl?: string;
 }
 
-export function TripCard({ id, title, startDate, endDate, destination, memberCount, role, imageUrl }: TripCardProps) {
+export function TripCard({ id, title, startDateTime, endDateTime, timezone = "UTC", location, memberCount, role, imageUrl }: TripCardProps) {
+  const formattedDates = `${DateTime.fromISO(startDateTime).setZone(timezone).toFormat('MMM d')} - ${DateTime.fromISO(endDateTime).setZone(timezone).toFormat('MMM d, yyyy')}`;
   const roleColors = {
     OWNER: 'bg-blue-100 text-blue-700',
     EDITOR: 'bg-teal-100 text-teal-700',
@@ -51,17 +54,17 @@ export function TripCard({ id, title, startDate, endDate, destination, memberCou
             {title}
           </h3>
           
-          {destination && (
+          {location && (
             <div className="flex items-center gap-1 text-slate-400 text-xs mb-3">
               <MapPin size={10} />
-              <span>{destination}</span>
+              <span>{location}</span>
             </div>
           )}
           
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-slate-500 text-sm">
-              <Calendar size={14} />
-              <span>{startDate} - {endDate}</span>
+              <Calendar size={12} className="text-slate-400" />
+              <span>{formattedDates}</span>
             </div>
             
             <div className="flex items-center gap-2 text-slate-500 text-sm">

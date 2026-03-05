@@ -14,7 +14,7 @@ router.use(requireAuth);
 router.get('/', tripController.getMyTrips);
 router.post('/', validate(createTripSchema), tripController.createTrip);
 router.get('/:id', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), tripController.getTripById);
-router.put('/:id', authorize([TripRole.OWNER, TripRole.EDITOR]), validate(updateTripSchema), tripController.updateTrip);
+router.put('/:id', authorize([TripRole.OWNER]), validate(updateTripSchema), tripController.updateTrip);
 router.delete('/:id', authorize([TripRole.OWNER]), tripController.deleteTrip);
 
 // Member Management

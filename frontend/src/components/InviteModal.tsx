@@ -1,20 +1,52 @@
-import { X, Copy, Check, Link as LinkIcon, Shield, Clock } from "lucide-react";
-import { useState } from "react";
+import { X, Copy, Check, Link as LinkIcon, Shield, Clock, Loader2, RefreshCw } from "lucide-react";
+import { useState, useEffect } from "react";
+import { inviteService } from "../lib/inviteService";
 
 interface InviteModalProps {
   isOpen: boolean;
   onClose: () => void;
   tripTitle: string;
+  tripId: string;
 }
 
-export function InviteModal({ isOpen, onClose, tripTitle }: InviteModalProps) {
+export function InviteModal({ isOpen, onClose, tripTitle, tripId }: InviteModalProps) {
   const [copied, setCopied] = useState(false);
   const [role, setRole] = useState<'Editor' | 'Viewer'>('Editor');
-  const [expiry, setExpiry] = useState('7');
+  const [expiryDays, setExpiryDays] = useState('7');
+  const [inviteLink, setInviteLink] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setInviteLink('');
+      setError(null);
+    }
+  }, [isOpen]);
+
+  const generateLink = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      let expiresAt: string | undefined;
+      if (expiryDays !== 'never') {
+        const date = new Date();
+        date.setDate(date.getDate() + parseInt(expiryDays));
+        expiresAt = date.toISOString();
+      }
+
+      const res = await inviteService.generate(tripId, role.toUpperCase(), expiresAt);
+      setInviteLink(`${window.location.origin}/join/${res.inviteToken}`);
+    } catch (err) {
+      console.error(err);
+      setError('Failed to generate invite link');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   if (!isOpen) return null;
 
-  const inviteLink = `https://coyatra.app/join/tr_${Math.random().toString(36).substr(2, 9)}?role=${role.toLowerCase()}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(inviteLink);
@@ -49,23 +81,40 @@ export function InviteModal({ isOpen, onClose, tripTitle }: InviteModalProps) {
         <div className="p-8 space-y-8">
           {/* Link Box */}
           <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Shareable Link</label>
-            <div className="flex gap-2 p-1.5 bg-slate-50 border border-slate-200 rounded-2xl group focus-within:border-primary transition-colors ring-offset-0 focus-within:ring-2 focus-within:ring-primary/10">
-              <div className="flex-1 px-4 py-3 text-sm text-slate-600 font-medium truncate select-all">
-                {inviteLink}
-              </div>
-              <button 
-                onClick={handleCopy}
-                className={`flex items-center gap-2 px-4 rounded-xl font-bold text-sm transition-all ${
-                  copied 
-                  ? 'bg-secondary text-white shadow-lg shadow-teal-500/20' 
-                  : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 shadow-sm'
-                }`}
-              >
-                {copied ? <Check size={16} /> : <Copy size={16} />}
-                <span>{copied ? 'Copied!' : 'Copy'}</span>
-              </button>
+            <div className="flex items-center justify-between ml-1">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-1.5">
+                 Shareable Link
+              </label>
+              {error && <span className="text-[10px] font-bold text-red-500">{error}</span>}
             </div>
+
+            {!inviteLink ? (
+              <button
+                onClick={generateLink}
+                disabled={isLoading}
+                className="w-full h-12 flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 border-dashed rounded-2xl text-sm font-bold text-slate-500 hover:text-primary hover:border-primary hover:bg-blue-50/50 transition-all focus:outline-none"
+              >
+                {isLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+                {isLoading ? "Generating..." : "Generate Invite Link"}
+              </button>
+            ) : (
+              <div className="flex gap-2 p-1.5 bg-slate-50 border border-slate-200 rounded-2xl group focus-within:border-primary transition-colors ring-offset-0 focus-within:ring-2 focus-within:ring-primary/10">
+                <div className="flex-1 px-4 py-3 text-sm text-slate-600 font-medium truncate select-all">
+                  {inviteLink}
+                </div>
+                <button 
+                  onClick={handleCopy}
+                  className={`flex items-center gap-2 px-4 rounded-xl font-bold text-sm transition-all ${
+                    copied 
+                    ? 'bg-secondary text-white shadow-lg shadow-teal-500/20' 
+                    : 'bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 shadow-sm'
+                  }`}
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  <span>{copied ? 'Copied!' : 'Copy'}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Settings Grid */}
@@ -78,7 +127,10 @@ export function InviteModal({ isOpen, onClose, tripTitle }: InviteModalProps) {
                 {(['Editor', 'Viewer'] as const).map((r) => (
                   <button
                     key={r}
-                    onClick={() => setRole(r)}
+                    onClick={() => {
+                        setRole(r);
+                        setInviteLink('');
+                    }}
                     className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
                       role === r 
                       ? 'bg-white text-primary shadow-sm ring-1 ring-slate-100' 
@@ -97,8 +149,11 @@ export function InviteModal({ isOpen, onClose, tripTitle }: InviteModalProps) {
               </label>
               <select 
                 className="w-full px-4 py-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-bold text-slate-700 outline-none focus:ring-2 focus:ring-primary/10 appearance-none cursor-pointer"
-                value={expiry}
-                onChange={(e) => setExpiry(e.target.value)}
+                value={expiryDays}
+                onChange={(e) => {
+                  setExpiryDays(e.target.value);
+                  setInviteLink('');
+                }}
               >
                 <option value="1">1 Day</option>
                 <option value="7">7 Days</option>

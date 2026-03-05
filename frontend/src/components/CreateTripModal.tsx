@@ -1,5 +1,6 @@
 import { X, Calendar, MapPin, Loader2 } from "lucide-react";
 import { useState } from "react";
+import { DateTime } from "luxon";
 
 interface CreateTripModalProps {
   isOpen: boolean;
@@ -12,8 +13,9 @@ export function CreateTripModal({ isOpen, onClose, onCreate }: CreateTripModalPr
   const [formData, setFormData] = useState({
     title: "",
     destination: "",
-    startDate: "",
-    endDate: "",
+    startDateTime: "",
+    endDateTime: "",
+    timezone: (Intl as any).supportedValuesOf ? (Intl as any).supportedValuesOf('timeZone')[0] : "UTC",
   });
 
   if (!isOpen) return null;
@@ -21,9 +23,19 @@ export function CreateTripModal({ isOpen, onClose, onCreate }: CreateTripModalPr
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API call
+
+    // Convert local dates to UTC ISO strings using the selected timezone
+    const startISO = DateTime.fromISO(formData.startDateTime, { zone: formData.timezone }).startOf('day').toUTC().toISO();
+    const endISO = DateTime.fromISO(formData.endDateTime, { zone: formData.timezone }).endOf('day').toUTC().toISO();
+
+    const tripData = {
+      ...formData,
+      startDateTime: startISO,
+      endDateTime: endISO,
+    };
+
     setTimeout(() => {
-      onCreate(formData);
+      onCreate(tripData);
       setLoading(false);
       onClose();
     }, 1000);
@@ -52,7 +64,7 @@ export function CreateTripModal({ isOpen, onClose, onCreate }: CreateTripModalPr
             <input 
               required
               type="text" 
-              placeholder="e.g. Summer in Santorini"
+              placeholder="e.g. Dream Trip to Interlaken"
               className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all"
               value={formData.title}
               onChange={(e) => setFormData({...formData, title: e.target.value})}
@@ -74,6 +86,21 @@ export function CreateTripModal({ isOpen, onClose, onCreate }: CreateTripModalPr
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-slate-700">Timezone</label>
+            <select 
+              required
+              className="w-full px-4 py-3 bg-white border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2214%22%20height%3D%2214%22%20viewBox%3D%220%200%2014%2014%22%20fill%3D%22none%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M3.5%205.25L7%208.75L10.5%205.25%22%20stroke%3D%22%2394A3B8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22/%3E%3C/svg%3E')] bg-[length:14px_14px] bg-[right_1rem_center] bg-no-repeat"
+              value={formData.timezone}
+              onChange={(e) => setFormData({...formData, timezone: e.target.value})}
+            >
+              {(Intl as any).supportedValuesOf('timeZone').map((tz: string) => (
+                <option key={tz} value={tz}>{tz.replace(/_/g, ' ')}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-slate-400 font-medium tracking-tight">Activities will be scheduled in this local time.</p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700">Start Date</label>
@@ -83,8 +110,8 @@ export function CreateTripModal({ isOpen, onClose, onCreate }: CreateTripModalPr
                   required
                   type="date" 
                   className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
-                  value={formData.startDate}
-                  onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                  value={formData.startDateTime}
+                  onChange={(e) => setFormData({...formData, startDateTime: e.target.value})}
                 />
               </div>
             </div>
@@ -96,8 +123,8 @@ export function CreateTripModal({ isOpen, onClose, onCreate }: CreateTripModalPr
                   required
                   type="date" 
                   className="w-full pl-12 pr-4 py-3 bg-white border border-border rounded-xl focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-sm"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                  value={formData.endDateTime}
+                  onChange={(e) => setFormData({...formData, endDateTime: e.target.value})}
                 />
               </div>
             </div>

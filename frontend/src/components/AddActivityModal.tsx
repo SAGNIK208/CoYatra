@@ -1,30 +1,90 @@
-import { X, Calendar, Clock, MapPin, Tag, AlignLeft } from "lucide-react";
+import { X, Calendar, Clock, MapPin, Tag, AlignLeft, Plane } from "lucide-react";
 import { useState } from "react";
+import { DateTime } from "luxon";
 
 interface AddActivityModalProps {
   isOpen: boolean;
   onClose: () => void;
   onCreate: (activity: any) => void;
   defaultDate?: string;
+  tripStartDate: string;
+  tripEndDate: string;
+  tripTimezone: string;
+  initialData?: any; // When set, modal works in edit mode
 }
 
-export function AddActivityModal({ isOpen, onClose, onCreate, defaultDate }: AddActivityModalProps) {
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(defaultDate || "2026-08-11");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
-  const [location, setLocation] = useState("");
-  const [description, setDescription] = useState("");
-  const [category, setCategory] = useState("Adventure");
+export function AddActivityModal({ 
+  isOpen, 
+  onClose, 
+  onCreate, 
+  defaultDate, 
+  tripStartDate, 
+  tripEndDate,
+  tripTimezone,
+  initialData,
+}: AddActivityModalProps) {
+  const isEditMode = !!initialData;
+  const [title, setTitle] = useState(initialData?.title || "");
+  const [date, setDate] = useState(initialData?.date || defaultDate || tripStartDate);
+  const [startTime, setStartTime] = useState(initialData?.startTime || "09:00");
+  const [endTime, setEndTime] = useState(initialData?.endTime || "10:00");
+  const [location, setLocation] = useState(initialData?.location || "");
+  const [description, setDescription] = useState(initialData?.description || "");
+  const [category, setCategory] = useState(initialData?.category || "Other");
+  const [subType, setSubType] = useState(initialData?.subType || "");
+  const [error, setError] = useState<string | null>(null);
+
+  const formatDDMMYYYY = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+  };
+
+  const CATEGORY_TO_TYPE: Record<string, string> = {
+    "Adventure": "OTHER",
+    "Food": "FOOD",
+    "Relaxation": "OTHER",
+    "Culture": "VISIT",
+    "Travel": "TRAVEL",
+    "Sightseeing": "VISIT",
+    "Other": "OTHER"
+  };
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
+    setError(null);
+
+    if (!title.trim()) {
+      setError("Activity title is required");
+      return;
+    }
+
+    const selectedDate = new Date(date);
+    const start = new Date(tripStartDate);
+    const end = new Date(tripEndDate);
+
+    // Normalize to dates only for comparison
+    const normSelected = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    const normStart = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const normEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+    if (normSelected < normStart || normSelected > normEnd) {
+      setError(`Date must be between ${formatDDMMYYYY(tripStartDate)} and ${formatDDMMYYYY(tripEndDate)}`);
+      return;
+    }
+
+    if (startTime >= endTime) {
+      setError("End time must be after start time");
+      return;
+    }
+
+    // Generate UTC ISO strings using the trip's timezone
+    const startISO = DateTime.fromFormat(`${date} ${startTime}`, "yyyy-MM-dd HH:mm", { zone: tripTimezone }).toUTC().toISO();
+    const endISO = DateTime.fromFormat(`${date} ${endTime}`, "yyyy-MM-dd HH:mm", { zone: tripTimezone }).toUTC().toISO();
 
     onCreate({
-      id: Date.now().toString(),
+      id: initialData?.id || Date.now().toString(),
       title,
       date,
       startTime,
@@ -32,12 +92,17 @@ export function AddActivityModal({ isOpen, onClose, onCreate, defaultDate }: Add
       location,
       description,
       category,
-      type: category
+      type: CATEGORY_TO_TYPE[category] || "OTHER",
+      subType: category === "Travel" ? subType : undefined,
+      startDateTime: startISO,
+      endDateTime: endISO,
+      timezone: tripTimezone
     });
 
     setTitle("");
     setLocation("");
     setDescription("");
+    setSubType("");
     onClose();
   };
 
@@ -53,7 +118,7 @@ export function AddActivityModal({ isOpen, onClose, onCreate, defaultDate }: Add
             <div className="p-2.5 bg-blue-50 rounded-xl text-primary">
               <Calendar size={22} />
             </div>
-            <h3 className="text-xl font-bold text-slate-900">Add Activity</h3>
+            <h3 className="text-xl font-bold text-slate-900">{isEditMode ? "Edit Activity" : "Add Activity"}</h3>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-slate-50 rounded-full transition-colors text-slate-400">
             <X size={20} />
@@ -61,6 +126,11 @@ export function AddActivityModal({ isOpen, onClose, onCreate, defaultDate }: Add
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {error && (
+            <div className="bg-red-50 text-red-500 p-4 rounded-xl text-xs font-bold animate-in fade-in slide-in-from-top-2">
+              {error}
+            </div>
+          )}
           <div className="space-y-2">
             <input 
               autoFocus
@@ -135,6 +205,21 @@ export function AddActivityModal({ isOpen, onClose, onCreate, defaultDate }: Add
               onChange={(e) => setLocation(e.target.value)}
             />
           </div>
+          
+          {category === "Travel" && (
+            <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <Plane size={12} /> Travel Type
+              </label>
+              <input 
+                type="text"
+                placeholder="e.g. Flight LX161, Eurostar, Uber"
+                className="w-full px-4 py-3 bg-blue-50/50 border border-blue-100 rounded-2xl focus:ring-2 focus:ring-primary/20 outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300"
+                value={subType}
+                onChange={(e) => setSubType(e.target.value)}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
@@ -153,7 +238,7 @@ export function AddActivityModal({ isOpen, onClose, onCreate, defaultDate }: Add
             type="submit"
             className="w-full py-4 bg-primary hover:bg-blue-700 text-white font-bold rounded-2xl transition-all shadow-lg shadow-primary/20 mt-4"
           >
-            Create Activity
+            {isEditMode ? "Save Changes" : "Create Activity"}
           </button>
         </form>
       </div>
