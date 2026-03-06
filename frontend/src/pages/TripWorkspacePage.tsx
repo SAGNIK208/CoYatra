@@ -154,7 +154,12 @@ export function TripWorkspacePage() {
                 <p className="text-slate-500 max-w-md">Our magical photo galleries and shared albums are coming soon to the CoYatra UI! Stay tuned for updates.</p>
               </div>
             )}
-            {activeTab === 'settings' && trip?.role === 'OWNER' && <TripSettingsModule trip={trip} onUpdate={(updated) => setTrip(updated)} />}
+            {activeTab === 'settings' && trip?.role === 'OWNER' && (
+              <TripSettingsModule 
+                trip={trip} 
+                onUpdate={(updated) => setTrip((prev: any) => ({ ...prev, ...updated }))} 
+              />
+            )}
           </div>
         </main>
       </div>

@@ -29,7 +29,14 @@ export const getPresignedUploadUrl = async (
     ContentType: contentType,
   });
 
-  return getSignedUrl(s3Client, command, { expiresIn });
+  const url = await getSignedUrl(s3Client, command, { expiresIn });
+
+  // If we have a public endpoint, replace the internal one in the generated URL
+  if (env.AWS_S3_PUBLIC_ENDPOINT && env.AWS_ENDPOINT) {
+    return url.replace(env.AWS_ENDPOINT, env.AWS_S3_PUBLIC_ENDPOINT);
+  }
+
+  return url;
 };
 
 /**

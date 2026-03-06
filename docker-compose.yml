@@ -5,21 +5,65 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - ${DATA_PATH:-/Users/sagnikguru/Developer/MERN/CoYatra-data}/mongodb:/data/db
+      - ${DATA_PATH:-./data}/mongodb:/data/db
     environment:
       - MONGO_INITDB_DATABASE=coyatra
+    networks:
+      - coyatra-network
 
   localstack:
     image: localstack/localstack:latest
     container_name: coyatra-localstack
     ports:
-      - "4566:4566"            # LocalStack Gateway
-      - "4510-4559:4510-4559"  # external services port range
+      - "4566:4566"
+      - "4510-4559:4510-4559"
     environment:
       - SERVICES=s3
-      - DEBUG=1
+      - DEBUG=${DEBUG:-0}
       - DOCKER_HOST=unix:///var/run/docker.sock
     volumes:
-      - ${DATA_PATH:-/Users/sagnikguru/Developer/MERN/CoYatra-data}/localstack:/var/lib/localstack
+      - ${DATA_PATH:-./data}/localstack:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - coyatra-network
 
+  backend:
+    build: ./backend
+    container_name: coyatra-backend
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - MONGO_URI=mongodb://mongodb:27017/coyatra
+      - NODE_ENV=development
+      - CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - CORS_ORIGINS=${CORS_ORIGINS}
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+      - AWS_REGION=ap-south-1
+      - AWS_S3_BUCKET_NAME=coyatra-local
+      - AWS_ENDPOINT=http://localstack:4566
+      - AWS_S3_PUBLIC_ENDPOINT=${AWS_S3_PUBLIC_ENDPOINT}
+      - CLIENT_URL=http://localhost:${FRONTEND_PORT:-80}
+    depends_on:
+      - mongodb
+      - localstack
+    networks:
+      - coyatra-network
+
+  frontend:
+    build: ./frontend
+    container_name: coyatra-frontend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+    environment:
+      - VITE_CLERK_PUBLISHABLE_KEY=${CLERK_PUBLISHABLE_KEY}
+    depends_on:
+      - backend
+    networks:
+      - coyatra-network
+
+networks:
+  coyatra-network:
+    driver: bridge

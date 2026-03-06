@@ -21,6 +21,7 @@ const env = {
   AWS_REGION: requireEnv('AWS_REGION'),
   AWS_S3_BUCKET_NAME: requireEnv('AWS_S3_BUCKET_NAME'),
   AWS_ENDPOINT: process.env['AWS_ENDPOINT'],
+  AWS_S3_PUBLIC_ENDPOINT: process.env['AWS_S3_PUBLIC_ENDPOINT'],
 } as const;
 
 export default env;

@@ -13,8 +13,12 @@ import mediaRouter from './features/media/media.routes';
 const app: Application = express();
 
 // ── Middleware ────────────────────────────────────────────────────────────────
+const corsOrigins = process.env['CORS_ORIGINS'] 
+  ? process.env['CORS_ORIGINS'].split(',').map(o => o.trim()) 
+  : [process.env['CLIENT_URL'] || ''];
+
 app.use(cors({
-  origin: process.env['CLIENT_URL'] || 'http://localhost:5173',
+  origin: corsOrigins,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,

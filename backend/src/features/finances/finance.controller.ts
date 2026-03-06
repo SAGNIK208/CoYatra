@@ -16,12 +16,18 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
       paidAt: pUserId === paidByUserId ? new Date() : undefined
     }));
 
+    // Calculate initial status
+    const allPaid = processedPayees.every((p: any) => p.isPaid);
+    const somePaid = processedPayees.some((p: any) => p.isPaid);
+    const initialStatus = allPaid ? 'Settled' : (somePaid ? 'Paid' : 'Pending');
+
     const expense = await Expense.create({
       ...rest,
       amount,
       paidByUserId,
       payees: processedPayees,
-      splitType
+      splitType,
+      status: initialStatus
     });
     
     res.status(201).json(expense);

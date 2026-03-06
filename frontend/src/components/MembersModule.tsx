@@ -143,6 +143,8 @@ export function MembersModule({
           onClose={() => setIsContribModalOpen(false)}
           memberName={selectedMember.name}
           avatar={selectedMember.avatar}
+          tripId={tripId}
+          memberClerkId={selectedMember.clerkId}
         />
       )}
     </div>

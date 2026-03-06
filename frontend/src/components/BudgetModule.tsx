@@ -121,20 +121,27 @@ export function BudgetModule({ tripId }: { tripId: string }) {
         trip?.members?.find((m: any) => m.user?._id === id)
       ).filter(Boolean);
 
+      const mappedPayees = payeeMembersList.map(m => ({
+        userId: m.user?._id,
+        name: m.user?.name,
+        amount: perPersonAmount,
+        isPaid: m.user?._id === data.paidByUserId // Always auto-paid by the payer
+      }));
+
+      // Calculate initial status
+      const allPaid = mappedPayees.every(p => p.isPaid);
+      const somePaid = mappedPayees.some(p => p.isPaid);
+      const initialStatus = allPaid ? 'Settled' : (somePaid ? 'Paid' : 'Pending');
+
       const mapped: Expense = {
         id: newExpense._id || newExpense.id,
         item: newExpense.title,
         amount: newExpense.amount,
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        status: "Pending",
+        status: initialStatus as any,
         paidBy: paidByMember?.user?.name || "Unknown",
         paidByUserId: data.paidByUserId,
-        payees: payeeMembersList.map(m => ({
-          userId: m.user?._id,
-          name: m.user?.name,
-          amount: perPersonAmount,
-          isPaid: m.user?._id === data.paidByUserId // Always auto-paid by the payer
-        }))
+        payees: mappedPayees
       };
       
       setExpenses([mapped, ...expenses]);
@@ -264,7 +271,11 @@ export function BudgetModule({ tripId }: { tripId: string }) {
             </thead>
             <tbody className="divide-y divide-slate-50">
               {expenses.map((exp) => (
-                <tr key={exp.id} className="hover:bg-slate-50/50 transition-colors group align-top">
+                <tr 
+                  key={exp.id} 
+                  onClick={() => setSelectedExpense(exp)}
+                  className="hover:bg-slate-50 transition-all group align-top cursor-pointer active:bg-slate-100/50"
+                >
                   <td className="px-6 py-6 min-w-[200px]">
                     <div className="flex items-start gap-4">
                       <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-primary transition-colors shrink-0">
@@ -302,24 +313,25 @@ export function BudgetModule({ tripId }: { tripId: string }) {
                       </p>
                     </div>
                   </td>
-                  <td className="px-6 py-6 text-center min-w-[140px]">
-                    <div className="flex flex-col gap-1.5 items-center">
-                      <button 
-                        onClick={() => setSelectedExpense(exp)}
-                        className={`inline-flex items-center gap-1.5 text-[9px] font-black px-3 py-1.5 rounded-lg border uppercase tracking-widest transition-all hover:scale-105 ${
-                          exp.status === 'Settled' 
-                          ? 'bg-blue-50 text-primary border-blue-100'
-                          : exp.status === 'Paid'
-                          ? 'bg-teal-50 text-secondary border-teal-100'
-                          : 'bg-white text-slate-400 border-slate-200 shadow-sm'
-                        }`}
-                      >
-                        {exp.status === 'Settled' || exp.status === 'Paid' ? <Check size={10} strokeWidth={3} /> : null}
-                        {exp.status}
-                      </button>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                        {exp.payees.filter(p => p.isPaid).length}/{exp.payees.length} Paid
-                      </p>
+                  <td className="px-6 py-6 text-center min-w-[160px]">
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="flex flex-col gap-1.5 items-center">
+                        <div 
+                          className={`inline-flex items-center gap-1.5 text-[9px] font-black px-4 py-2 rounded-xl border uppercase tracking-widest transition-all shadow-sm ${
+                            exp.status === 'Settled' 
+                            ? 'bg-blue-50 text-primary border-blue-100'
+                            : exp.status === 'Paid'
+                            ? 'bg-teal-50 text-secondary border-teal-100'
+                            : 'bg-white text-slate-500 border-slate-200'
+                          }`}
+                        >
+                          {exp.status === 'Settled' || exp.status === 'Paid' ? <Check size={10} strokeWidth={3} /> : null}
+                          {exp.status}
+                        </div>
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                          {exp.payees.filter(p => p.isPaid).length}/{exp.payees.length} Paid
+                        </p>
+                      </div>
                     </div>
                   </td>
                 </tr>

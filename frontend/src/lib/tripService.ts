@@ -25,6 +25,10 @@ export const tripService = {
     const response = await api.delete(`/trips/${tripId}/members/${userId}`);
     return response.data;
   },
+  getMemberContributions: async (tripId: string, userId: string) => {
+    const response = await api.get(`/trips/${tripId}/members/${userId}/contributions`);
+    return response.data;
+  },
 };
 
 export default tripService;

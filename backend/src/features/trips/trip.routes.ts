@@ -21,5 +21,6 @@ router.delete('/:id', authorize([TripRole.OWNER]), tripController.deleteTrip);
 router.get('/:id/members', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), tripController.getTripMembers);
 router.patch('/:id/members/:userId', authorize([TripRole.OWNER]), tripController.updateMemberRole);
 router.delete('/:id/members/:userId', authorize([TripRole.OWNER]), tripController.removeMember);
+router.get('/:id/members/:userId/contributions', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), tripController.getMemberContributions);
 
 export default router;
