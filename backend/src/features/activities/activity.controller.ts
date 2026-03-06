@@ -5,6 +5,7 @@ import { Activity } from './activity.model';
 import { User } from '../users/user.model';
 import { TripMember } from '../trips/models/trip-member.model';
 import { TripRole } from '../../types/enums';
+import logger from '../../utils/logger';
 
 /**
  * Creates a new activity for a trip.
@@ -47,8 +48,8 @@ export const createActivity = async (req: Request, res: Response): Promise<void>
 
     res.status(201).json(activity);
   } catch (error) {
-    console.error('Error creating activity:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    logger.error(error, 'Error creating activity');
+    res.status(500).json({ error: 'Failed to create activity' });
   }
 };
 
@@ -60,8 +61,9 @@ export const getTripActivities = async (req: Request, res: Response): Promise<vo
     const { tripId } = req.params;
     const activities = await Activity.find({ tripId }).sort({ startDateTime: 1, order: 1 });
     res.status(200).json(activities);
-  } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+  } catch (error) {   
+    logger.error(error, 'Error getting trip activities');
+    res.status(500).json({ error: 'Failed to get trip activities' });
   }
 };
 
@@ -200,12 +202,14 @@ export const reorderActivities = async (req: Request, res: Response): Promise<vo
     try {
       await Activity.bulkWrite(bulkOps);
     } catch (bulkErr: any) {
+      logger.error(bulkErr, 'BulkWrite failed for activities');
       res.status(500).json({ error: `BulkWrite failed: ${bulkErr.message}` });
       return;
     }
 
     res.status(200).json({ message: 'Activities reordered' });
   } catch (error) {
+    logger.error(error, 'Failed to reorder activities');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

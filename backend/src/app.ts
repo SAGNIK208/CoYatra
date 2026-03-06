@@ -9,6 +9,7 @@ import commentRouter from './features/comments/comment.routes';
 import financeRouter from './features/finances/finance.routes';
 import inviteRouter from './features/collaboration/invite.routes';
 import mediaRouter from './features/media/media.routes';
+import logger from './utils/logger';
 
 const app: Application = express();
 
@@ -26,6 +27,12 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware());
+
+// Request logging middleware
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  logger.info({ method: req.method, url: req.url, ip: req.ip }, 'Incoming Request');
+  next();
+});
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req: Request, res: Response) => {
@@ -50,7 +57,7 @@ app.use((_req: Request, res: Response) => {
 // ── Global error handler ──────────────────────────────────────────────────────
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err.stack);
+  logger.error(err, 'Unhandled Error');
   res.status(500).json({ error: 'Internal Server Error' });
 });
 

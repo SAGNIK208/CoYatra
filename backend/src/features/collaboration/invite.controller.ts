@@ -5,6 +5,7 @@ import { InviteStatus, TripRole } from '../../types/enums';
 import { TripMember } from '../trips/models/trip-member.model';
 import { Trip } from '../trips/models/trip.model';
 import { User } from '../users/user.model';
+import logger from '../../utils/logger';
 import { TripInvite } from './models/trip-invite.model';
 
 /**
@@ -46,6 +47,7 @@ export const generateInvite = async (req: Request, res: Response): Promise<void>
       expiresAt: invite.expiresAt,
     });
   } catch (error) {
+    logger.error(error, 'Failed to generate invite');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -101,6 +103,7 @@ export const joinTrip = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json({ message: 'Successfully joined trip', tripId: invite.tripId });
   } catch (error) {
+    logger.error(error, 'Failed to join trip');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -114,6 +117,7 @@ export const getActiveInvites = async (req: Request, res: Response): Promise<voi
     const invites = await TripInvite.find({ tripId, status: InviteStatus.PENDING });
     res.status(200).json(invites);
   } catch (error) {
+    logger.error(error, 'Failed to get active invites');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -147,6 +151,7 @@ export const getInviteDetails = async (req: Request, res: Response): Promise<voi
       owner: (invite.createdByUserId as any)?.name || 'Someone',
     });
   } catch (error) {
+    logger.error(error, 'Failed to get invite details');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -170,6 +175,7 @@ export const disableInvite = async (req: Request, res: Response): Promise<void> 
 
     res.status(200).json({ message: 'Invite disabled' });
   } catch (error) {
+    logger.error(error, 'Failed to disable invite');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

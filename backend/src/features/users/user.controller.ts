@@ -1,12 +1,13 @@
 import { Request, Response } from 'express';
 import { getAuth } from '@clerk/express';
 import { User } from './user.model';
+import logger from '../../utils/logger';
 
 export const getMe = async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req as any).auth?.userId || getAuth(req).userId;
 
-    const user = await User.findOne({ clerkId: userId });
+    const user = await User.findOne({ clerkId: userId }); 
 
     if (!user) {
       res.status(404).json({ error: 'User not found' });
@@ -15,7 +16,8 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    logger.error(error, 'Failed to get user profile');
+    res.status(500).json({ error: 'Failed to get user profile' });
   }
 };
 
@@ -41,8 +43,8 @@ export const getProfileUploadUrl = async (req: Request, res: Response): Promise<
       key,
     });
   } catch (error) {
-    console.error('S3 Presign Error:', error);
-    res.status(500).json({ error: 'Internal Server Error' });
+    logger.error(error, 'S3 Presign Error');
+    res.status(500).json({ error: 'Failed to generate upload URL' });
   }
 };
 
@@ -79,7 +81,8 @@ export const updateMe = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    logger.error(error, 'Failed to update user profile');
+    res.status(500).json({ error: 'Failed to update user profile' });
   }
 };
 
@@ -106,6 +109,7 @@ export const syncUser = async (req: Request, res: Response): Promise<void> => {
 
     res.status(200).json(user);
   } catch (error) {
-    res.status(500).json({ error: 'Internal Server Error' });
+    logger.error(error, 'Failed to sync user');
+    res.status(500).json({ error: 'Failed to sync user' });
   }
 };

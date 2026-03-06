@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { getAuth } from '@clerk/express';
 import { Trip } from './models/trip.model';
+import logger from '../../utils/logger';
 import { TripMember } from './models/trip-member.model';
 import { User } from '../users/user.model';
 import { TripRole } from '../../types/enums';
@@ -42,6 +43,7 @@ export const createTrip = async (req: Request, res: Response): Promise<void> => 
 
     res.status(201).json(trip);
   } catch (error) {
+    logger.error(error, 'Failed to create trip');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -70,6 +72,7 @@ export const getMyTrips = async (req: Request, res: Response): Promise<void> => 
 
     res.status(200).json(trips);
   } catch (error) {
+    logger.error(error, 'Failed to get my trips');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -107,6 +110,7 @@ export const getTripById = async (req: Request, res: Response): Promise<void> =>
 
     res.status(200).json({ ...trip, role, members: formattedMembers });
   } catch (error) {
+    logger.error(error, 'Failed to get trip by ID');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -128,6 +132,7 @@ export const updateTrip = async (req: Request, res: Response): Promise<void> => 
 
     res.status(200).json(trip);
   } catch (error) {
+    logger.error(error, 'Failed to update trip');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -150,6 +155,7 @@ export const deleteTrip = async (req: Request, res: Response): Promise<void> => 
 
     res.status(204).send();
   } catch (error) {
+    logger.error(error, 'Failed to delete trip');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -163,6 +169,7 @@ export const getTripMembers = async (req: Request, res: Response): Promise<void>
     const members = await TripMember.find({ tripId: id }).populate('userId', 'name email profilePicUrl clerkId');
     res.status(200).json(members);
   } catch (error) {
+    logger.error(error, 'Failed to get trip members');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -199,6 +206,7 @@ export const updateMemberRole = async (req: Request, res: Response): Promise<voi
 
     res.status(200).json(membership);
   } catch (error) {
+    logger.error(error, 'Failed to update member role');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -225,6 +233,7 @@ export const removeMember = async (req: Request, res: Response): Promise<void> =
 
     res.status(204).send();
   } catch (error) {
+    logger.error(error, 'Failed to remove member');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -282,7 +291,7 @@ export const getMemberContributions = async (req: Request, res: Response): Promi
 
     res.status(200).json(contributions);
   } catch (error) {
-    console.error('getMemberContributions error:', error);
+    logger.error(error, 'getMemberContributions error');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

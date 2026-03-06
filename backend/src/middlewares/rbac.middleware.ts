@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 import { TripRole } from '../types/enums';
+import logger from '../utils/logger';
 
 /**
  * Middleware to check if a user has a specific role in a trip.
@@ -35,7 +36,8 @@ export const authorize = (roles: TripRole[]) => {
             if (resource) tripId = (resource as any).tripId.toString();
           }
         } catch (mErr: any) {
-           return res.status(500).json({ error: `Model lookup failed for ${req.baseUrl}: ${mErr.message}` });
+          logger.error(mErr, 'Model lookup failed');
+          return res.status(500).json({ error: `Model lookup failed for ${req.baseUrl}: ${mErr.message}` });
         }
       }
 
@@ -47,6 +49,7 @@ export const authorize = (roles: TripRole[]) => {
       try {
         user = await mongoose.model('User').findOne({ clerkId: userId });
       } catch (uErr: any) {
+        logger.error(uErr, 'User lookup failed');
         return res.status(500).json({ error: `User lookup failed: ${uErr.message}` });
       }
 
@@ -61,17 +64,19 @@ export const authorize = (roles: TripRole[]) => {
           userId: user._id,
         });
       } catch (tmErr: any) {
+        logger.error(tmErr, 'Membership lookup failed');
         return res.status(500).json({ error: `Membership lookup failed: ${tmErr.message}` });
       }
 
       if (!membership || !roles.includes((membership as any).role)) {
+        logger.error('Insufficient permissions');
         return res.status(403).json({ error: 'Insufficient permissions' });
       }
 
       (req as any).membership = membership;
       next();
     } catch (error: any) {
-      console.error('Authorization Error:', error);
+      logger.error(error, 'Authorization Error');
       res.status(500).json({ 
         error: `Global RBAC error: ${error.message}`,
         stack: error.stack 

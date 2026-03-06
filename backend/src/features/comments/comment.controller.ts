@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getAuth } from '@clerk/express';
 import { Comment } from './comment.model';
 import { User } from '../users/user.model';
+import logger from '../../utils/logger';
 import { TripRole } from '../../types/enums';
 
 export const createComment = async (req: Request, res: Response): Promise<void> => {
@@ -24,6 +25,7 @@ export const createComment = async (req: Request, res: Response): Promise<void> 
 
     res.status(201).json(comment);
   } catch (error) {
+    logger.error(error, 'Failed to create comment');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -36,6 +38,7 @@ export const getContextComments = async (req: Request, res: Response): Promise<v
       .sort({ createdAt: 1 });
     res.status(200).json(comments);
   } catch (error) {
+    logger.error(error, 'Failed to get context comments');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -69,6 +72,7 @@ export const updateComment = async (req: Request, res: Response): Promise<void> 
 
     res.status(200).json(comment);
   } catch (error) {
+    logger.error(error, 'Failed to update comment');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getAuth } from '@clerk/express';
 import { ChecklistItem } from './checklist-item.model';
 import { User } from '../users/user.model';
+import logger from '../../utils/logger';
 
 export const createItem = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -18,6 +19,7 @@ export const createItem = async (req: Request, res: Response): Promise<void> => 
     });
     res.status(201).json(item);
   } catch (error) {
+    logger.error(error, 'Failed to create checklist item');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -43,6 +45,7 @@ export const getTripItems = async (req: Request, res: Response): Promise<void> =
       
     res.status(200).json(items);
   } catch (error) {
+    logger.error(error, 'Failed to get trip items');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

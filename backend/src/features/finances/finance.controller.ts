@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Expense } from './expense.model';
+import logger from '../../utils/logger';
 import { getAuth } from '@clerk/express';
 
 export const createExpense = async (req: Request, res: Response): Promise<void> => {
@@ -32,6 +33,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
     
     res.status(201).json(expense);
   } catch (error) {
+    logger.error(error, 'Failed to create expense');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -45,6 +47,7 @@ export const getTripExpenses = async (req: Request, res: Response): Promise<void
       .sort({ createdAt: -1 });
     res.status(200).json(expenses);
   } catch (error) {
+    logger.error(error, 'Failed to get trip expenses');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -93,7 +96,7 @@ export const updatePayeeStatus = async (req: Request, res: Response): Promise<vo
     await expense.save();
     res.status(200).json(expense);
   } catch (error) {
-    console.error('Error in updatePayeeStatus:', error);
+    logger.error(error, 'Error in updatePayeeStatus');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -108,6 +111,7 @@ export const updateExpense = async (req: Request, res: Response): Promise<void> 
     }
     res.status(200).json(expense);
   } catch (error) {
+    logger.error(error, 'Failed to update expense');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -122,6 +126,7 @@ export const deleteExpense = async (req: Request, res: Response): Promise<void> 
     }
     res.status(204).send();
   } catch (error) {
+    logger.error(error, 'Failed to delete expense');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };

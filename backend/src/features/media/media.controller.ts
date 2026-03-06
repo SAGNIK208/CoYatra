@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { getAuth } from '@clerk/express';
 import { getPresignedUploadUrl } from '../../lib/s3';
 import { Attachment } from './attachment.model';
+import logger from '../../utils/logger';
 import { User } from '../users/user.model';
 
 export const getUploadUrl = async (req: Request, res: Response): Promise<void> => {
@@ -16,6 +17,7 @@ export const getUploadUrl = async (req: Request, res: Response): Promise<void> =
       fileKey,
     });
   } catch (error) {
+    logger.error(error, 'Failed to generate upload URL');
     res.status(500).json({ error: 'Failed to generate upload URL' });
   }
 };
@@ -61,6 +63,7 @@ export const confirmUpload = async (req: Request, res: Response): Promise<void> 
 
     res.status(201).json(attachment);
   } catch (error) {
+    logger.error(error, 'Failed to confirm upload');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -71,6 +74,7 @@ export const getTripAttachments = async (req: Request, res: Response): Promise<v
     const attachments = await Attachment.find({ tripId }).sort({ createdAt: -1 });
     res.status(200).json(attachments);
   } catch (error) {
+    logger.error(error, 'Failed to get trip attachments');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
@@ -86,6 +90,7 @@ export const deleteAttachment = async (req: Request, res: Response): Promise<voi
     // Note: In production, also delete from S3
     res.status(204).send();
   } catch (error) {
+    logger.error(error, 'Failed to delete attachment');
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
