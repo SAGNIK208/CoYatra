@@ -1,0 +1,649 @@
+{
+	"info": {
+		"name": "CoYatra API Collection",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Get My Profile",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "me"]
+						}
+					}
+				},
+				{
+					"name": "Update My Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"bio\": \"Travel enthusiast\",\n  \"homeBase\": \"Bangalore\",\n  \"travelStyle\": \"Adventure\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/me",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "me"]
+						}
+					}
+				},
+				{
+					"name": "Sync User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"clerkId\": \"user_...\",\n  \"email\": \"user@example.com\",\n  \"name\": \"John Doe\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/sync",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "sync"]
+						}
+					}
+				},
+				{
+					"name": "Get Profile Upload URL",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fileName\": \"profile.jpg\",\n  \"contentType\": \"image/jpeg\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/users/profile-upload-url",
+							"host": ["{{baseUrl}}"],
+							"path": ["users", "profile-upload-url"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Trips",
+			"item": [
+				{
+					"name": "Get All My Trips",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/trips",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips"]
+						}
+					}
+				},
+				{
+					"name": "Create Trip",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Bali Summer 2024\",\n  \"description\": \"Island hopping and relaxation\",\n  \"location\": \"Bali, Indonesia\",\n  \"startDateTime\": \"2024-07-01T00:00:00Z\",\n  \"endDateTime\": \"2024-07-15T23:59:59Z\",\n  \"timezone\": \"Asia/Makassar\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/trips",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips"]
+						}
+					}
+				},
+				{
+					"name": "Get Trip Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/trips/{{tripId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips", "{{tripId}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Trip",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Bali Trip\",\n  \"description\": \"New description\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/trips/{{tripId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips", "{{tripId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Trip",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/trips/{{tripId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips", "{{tripId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Trip Members",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/trips/{{tripId}}/members",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips", "{{tripId}}", "members"]
+						}
+					}
+				},
+				{
+					"name": "Update Member Role",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"role\": \"EDITOR\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/trips/{{tripId}}/members/{{memberClerkId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips", "{{tripId}}", "members", "{{memberClerkId}}"]
+						}
+					}
+				},
+				{
+					"name": "Remove Member",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/trips/{{tripId}}/members/{{memberClerkId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips", "{{tripId}}", "members", "{{memberClerkId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Member Contributions",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/trips/{{tripId}}/members/{{memberClerkId}}/contributions",
+							"host": ["{{baseUrl}}"],
+							"path": ["trips", "{{tripId}}", "members", "{{memberClerkId}}", "contributions"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Activities",
+			"item": [
+				{
+					"name": "Get Trip Activities",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/activities/trip/{{tripId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["activities", "trip", "{{tripId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Activity",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tripId\": \"{{tripId}}\",\n  \"name\": \"Eiffel Tower Visit\",\n  \"type\": \"Sightseeing\",\n  \"startDateTime\": \"2024-08-02T10:00:00Z\",\n  \"timezone\": \"Europe/Paris\",\n  \"order\": 1\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/activities",
+							"host": ["{{baseUrl}}"],
+							"path": ["activities"]
+						}
+					}
+				},
+				{
+					"name": "Update Activity",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Updated Activity Name\",\n  \"description\": \"New description\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/activities/{{activityId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["activities", "{{activityId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Activity",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/activities/{{activityId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["activities", "{{activityId}}"]
+						}
+					}
+				},
+				{
+					"name": "Reorder Activities",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"updates\": [\n    { \"id\": \"{{activityId}}\", \"order\": 0 },\n    { \"id\": \"another-id\", \"order\": 1 }\n  ]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/activities/reorder",
+							"host": ["{{baseUrl}}"],
+							"path": ["activities", "reorder"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Checklists",
+			"item": [
+				{
+					"name": "Get Trip Checklist",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/checklists/trip/{{tripId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["checklists", "trip", "{{tripId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tripId\": \"{{tripId}}\",\n  \"title\": \"Pack Passport\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/checklists",
+							"host": ["{{baseUrl}}"],
+							"path": ["checklists"]
+						}
+					}
+				},
+				{
+					"name": "Update Task",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Task Name\",\n  \"isDone\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/checklists/{{checklistId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["checklists", "{{checklistId}}"]
+						}
+					}
+				},
+				{
+					"name": "Delete Task",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/checklists/{{checklistId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["checklists", "{{checklistId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Finances",
+			"item": [
+				{
+					"name": "Get Trip Expenses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/finances/trip/{{tripId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["finances", "trip", "{{tripId}}"]
+						}
+					}
+				},
+				{
+					"name": "Create Expense",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tripId\": \"{{tripId}}\",\n  \"title\": \"Dinner\",\n  \"amount\": 1500,\n  \"currency\": \"INR\",\n  \"paidByUserId\": \"{{userId}}\",\n  \"payees\": [\"{{userId}}\", \"another-user-id\"],\n  \"splitType\": \"Equal\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/finances",
+							"host": ["{{baseUrl}}"],
+							"path": ["finances"]
+						}
+					}
+				},
+				{
+					"name": "Update Expense Structure",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Dinner Name\",\n  \"amount\": 1600\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/finances/{{expenseId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["finances", "{{expenseId}}"]
+						}
+					}
+				},
+				{
+					"name": "Update Individual Payee Status",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": \"{{userId}}\",\n  \"isPaid\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/finances/{{expenseId}}/payee",
+							"host": ["{{baseUrl}}"],
+							"path": ["finances", "{{expenseId}}", "payee"]
+						}
+					}
+				},
+				{
+					"name": "Delete Expense",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/finances/{{expenseId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["finances", "{{expenseId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Media",
+			"item": [
+				{
+					"name": "Get Trip Attachments",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/media/trip/{{tripId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["media", "trip", "{{tripId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Upload URL",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tripId\": \"{{tripId}}\",\n  \"fileName\": \"ticket.pdf\",\n  \"contentType\": \"application/pdf\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/media/upload-url",
+							"host": ["{{baseUrl}}"],
+							"path": ["media", "upload-url"]
+						}
+					}
+				},
+				{
+					"name": "Confirm Upload",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tripId\": \"{{tripId}}\",\n  \"fileName\": \"ticket.pdf\",\n  \"fileKey\": \"some-key\",\n  \"fileSize\": 1024,\n  \"mimeType\": \"application/pdf\",\n  \"activityId\": \"{{activityId}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/media/confirm",
+							"host": ["{{baseUrl}}"],
+							"path": ["media", "confirm"]
+						}
+					}
+				},
+				{
+					"name": "Delete Attachment",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/media/{{attachmentId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["media", "{{attachmentId}}"]
+						}
+					}
+				}
+			]
+		},
+		{
+			"name": "Invites",
+			"item": [
+				{
+					"name": "Generate Invite Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tripId\": \"{{tripId}}\",\n  \"role\": \"EDITOR\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/invites/generate",
+							"host": ["{{baseUrl}}"],
+							"path": ["invites", "generate"]
+						}
+					}
+				},
+				{
+					"name": "Join Trip via Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" },
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"{{inviteToken}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/invites/join",
+							"host": ["{{baseUrl}}"],
+							"path": ["invites", "join"]
+						}
+					}
+				},
+				{
+					"name": "Get Active Invites for Trip",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/invites/trip/{{tripId}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["invites", "trip", "{{tripId}}"]
+						}
+					}
+				},
+				{
+					"name": "Get Invite Details",
+					"request": {
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/invites/{{inviteToken}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["invites", "{{inviteToken}}"]
+						}
+					}
+				},
+				{
+					"name": "Disable Invite Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
+						"url": {
+							"raw": "{{baseUrl}}/invites/disable/{{inviteToken}}",
+							"host": ["{{baseUrl}}"],
+							"path": ["invites", "disable", "{{inviteToken}}"]
+						}
+					}
+				}
+			]
+		}
+	],
+	"variable": [
+		{ "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+		{ "key": "token", "value": "your-clerk-jwt-token" },
+		{ "key": "tripId", "value": "trip-id" },
+		{ "key": "userId", "value": "user-mongo-id" },
+		{ "key": "memberClerkId", "value": "user_..." },
+		{ "key": "activityId", "value": "activity-id" },
+		{ "key": "checklistId", "value": "checklist-id" },
+		{ "key": "expenseId", "value": "expense-id" },
+		{ "key": "attachmentId", "value": "attachment-id" },
+		{ "key": "inviteToken", "value": "invite-token" }
+	]
+}
