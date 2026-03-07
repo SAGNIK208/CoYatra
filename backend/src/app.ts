@@ -29,13 +29,21 @@ app.use(express.urlencoded({ extended: true }));
 app.use(clerkMiddleware());
 
 // Request logging middleware
-app.use((req: Request, _res: Response, next: NextFunction) => {
-  logger.info({ 
-    method: req.method, 
-    url: req.url, 
-    ip: req.ip,
-    userAgent: req.get('user-agent'),
-  }, 'Incoming Request');
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const start = Date.now();
+  
+  res.on('finish', () => {
+    const durationMs = Date.now() - start;
+    logger.info({ 
+      method: req.method, 
+      url: req.url, 
+      ip: req.ip,
+      userAgent: req.get('user-agent'),
+      statusCode: res.statusCode,
+      durationMs,
+    }, 'Incoming Request');
+  });
+  
   next();
 });
 
