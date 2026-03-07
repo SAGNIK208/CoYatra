@@ -1,4 +1,4 @@
-import { FileText, Plus, Trash2, Eye, Loader2, Info } from "lucide-react";
+import { FileText, Plus, Trash2, Eye, Loader2, Info, Download } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { fileService } from "../lib/fileService";
 
@@ -113,15 +113,9 @@ export function FilesModule({ tripId }: { tripId: string }) {
     try {
       const { url } = await fileService.getDownloadUrl(id, 'download');
       
-      // Create an invisible anchor tag to trigger the browser download
-      const link = document.createElement('a');
-      link.href = url;
-      // The filename is handled by the backend Content-Disposition header,
-      // but adding a default download attribute is a good fallback.
-      link.setAttribute('download', '');
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      // Directly assign the URL to location to trigger the browser download.
+      // The S3 URL contains a Content-Disposition header that forces the download.
+      window.location.href = url;
     } catch (error) {
       console.error("Failed to get download URL", error);
       alert("Failed to download file. Please try again.");
@@ -184,7 +178,7 @@ export function FilesModule({ tripId }: { tripId: string }) {
                 className="p-1.5 hover:bg-green-50 text-slate-400 hover:text-green-500 rounded-md transition-colors" 
                 title="Download"
               >
-                <FileText size={16} />
+                <Download size={16} />
               </button>
               <button 
                 onClick={() => handleDelete(file.id)}
