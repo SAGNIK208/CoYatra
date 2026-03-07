@@ -30,7 +30,12 @@ app.use(clerkMiddleware());
 
 // Request logging middleware
 app.use((req: Request, _res: Response, next: NextFunction) => {
-  logger.info({ method: req.method, url: req.url, ip: req.ip }, 'Incoming Request');
+  logger.info({ 
+    method: req.method, 
+    url: req.url, 
+    ip: req.ip,
+    userAgent: req.get('user-agent'),
+  }, 'Incoming Request');
   next();
 });
 
