@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import env from '../config/env';
 
@@ -40,6 +40,33 @@ export const getPresignedUploadUrl = async (
 };
 
 /**
+ * Generates a pre-signed URL for downloading or viewing a file from S3.
+ * @param key The S3 object key (path + filename).
+ * @param overrideDisposition Optional Content-Disposition header (e.g., 'attachment; filename="file.pdf"' to force download).
+ * @param expiresIn Time in seconds until the URL expires (default 3600).
+ */
+export const getPresignedDownloadUrl = async (
+  key: string,
+  overrideDisposition?: string,
+  expiresIn = 3600
+): Promise<string> => {
+  const command = new GetObjectCommand({
+    Bucket: env.AWS_S3_BUCKET_NAME,
+    Key: key,
+    ResponseContentDisposition: overrideDisposition,
+  });
+
+  const url = await getSignedUrl(s3Client, command, { expiresIn });
+
+  // If we have a public endpoint, replace the internal one in the generated URL
+  if (env.AWS_S3_PUBLIC_ENDPOINT && env.AWS_ENDPOINT) {
+    return url.replace(env.AWS_ENDPOINT, env.AWS_S3_PUBLIC_ENDPOINT);
+  }
+
+  return url;
+};
+
+/**
  * Utility to generate a consistent S3 key for profile pictures.
  * Format: profiles/{clerkId}/{timestamp}-{filename}
  */
@@ -48,3 +75,4 @@ export const generateProfilePicKey = (clerkId: string, fileName: string): string
   const sanitizedFileName = fileName.replace(/\s+/g, '-').toLowerCase();
   return `profiles/${clerkId}/${timestamp}-${sanitizedFileName}`;
 };
+

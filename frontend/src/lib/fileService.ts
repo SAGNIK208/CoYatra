@@ -33,6 +33,11 @@ export const fileService = {
     return response.data;
   },
 
+  getDownloadUrl: async (id: string, action: 'view' | 'download' = 'view') => {
+    const response = await api.get(`/media/${id}/download-url?action=${action}`);
+    return response.data;
+  },
+
   uploadToS3: async (uploadUrl: string, file: File) => {
     // We use a clean axios instance for S3 to avoid including our API's Authorization header
     await axios.put(uploadUrl, file, {

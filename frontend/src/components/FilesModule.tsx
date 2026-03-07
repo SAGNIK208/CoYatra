@@ -99,6 +99,35 @@ export function FilesModule({ tripId }: { tripId: string }) {
     }
   };
 
+  const handleView = async (id: string) => {
+    try {
+      const { url } = await fileService.getDownloadUrl(id, 'view');
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error("Failed to get view URL", error);
+      alert("Failed to open file. Please try again.");
+    }
+  };
+
+  const handleDownload = async (id: string) => {
+    try {
+      const { url } = await fileService.getDownloadUrl(id, 'download');
+      
+      // Create an invisible anchor tag to trigger the browser download
+      const link = document.createElement('a');
+      link.href = url;
+      // The filename is handled by the backend Content-Disposition header,
+      // but adding a default download attribute is a good fallback.
+      link.setAttribute('download', '');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error("Failed to get download URL", error);
+      alert("Failed to download file. Please try again.");
+    }
+  };
+
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this file?")) return;
     try {
@@ -143,22 +172,27 @@ export function FilesModule({ tripId }: { tripId: string }) {
           <div key={file.id} className="card bg-white shadow-sm group hover:border-primary transition-all p-4 flex flex-col items-center relative overflow-hidden text-center border-border">
             {/* Quick Actions Overlay */}
             <div className="absolute inset-x-0 bottom-0 bg-white/95 backdrop-blur-sm p-3 border-t border-slate-50 transform translate-y-full group-hover:translate-y-0 transition-transform flex justify-center gap-2">
-              <a 
-                href={file.url} 
-                target="_blank" 
-                rel="noopener noreferrer" 
+              <button 
+                onClick={() => handleView(file.id)}
                 className="p-1.5 hover:bg-blue-50 text-slate-400 hover:text-primary rounded-md transition-colors" 
                 title="View"
               >
                 <Eye size={16} />
-              </a>
-                <button 
-                  onClick={() => handleDelete(file.id)}
-                  className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors" 
-                  title="Delete"
-                >
-                  <Trash2 size={16} />
-                </button>
+              </button>
+              <button 
+                onClick={() => handleDownload(file.id)}
+                className="p-1.5 hover:bg-green-50 text-slate-400 hover:text-green-500 rounded-md transition-colors" 
+                title="Download"
+              >
+                <FileText size={16} />
+              </button>
+              <button 
+                onClick={() => handleDelete(file.id)}
+                className="p-1.5 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-md transition-colors" 
+                title="Delete"
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
 
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 duration-300 ${getFileIconColor(file.type)}`}>

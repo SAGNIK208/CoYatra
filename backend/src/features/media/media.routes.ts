@@ -26,6 +26,8 @@ router.post(
   mediaController.confirmUpload
 );
 
+router.get('/:id/download-url', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), mediaController.getDownloadUrl);
+
 router.delete('/:id', authorize([TripRole.OWNER, TripRole.EDITOR, TripRole.VIEWER]), mediaController.deleteAttachment);
 
 export default router;

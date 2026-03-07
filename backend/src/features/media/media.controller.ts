@@ -94,3 +94,32 @@ export const deleteAttachment = async (req: Request, res: Response): Promise<voi
     res.status(500).json({ error: 'Internal Server Error' });
   }
 };
+
+export const getDownloadUrl = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params;
+    const { action } = req.query; // 'view' or 'download'
+
+    const attachment = await Attachment.findById(id);
+    if (!attachment) {
+      res.status(404).json({ error: 'Attachment not found' });
+      return;
+    }
+
+    // If download action, force the browser to download instead of inline view
+    const overrideDisposition = action === 'download' 
+      ? `attachment; filename="${attachment.fileName}"`
+      : 'inline';
+
+    const url = await import('../../lib/s3').then(m => 
+      m.getPresignedDownloadUrl(attachment.fileKey, overrideDisposition)
+    );
+
+    logger.info({ attachmentId: id, action: action || 'view' }, 'Successfully generated presigned URL');
+
+    res.status(200).json({ url });
+  } catch (error) {
+    logger.error(error, 'Failed to generate download URL');
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
