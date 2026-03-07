@@ -19,6 +19,7 @@ All project documentation is located in the `docs/` folder. Below are the key re
 ### 🛠️ Developer Resources
 - **[API Collection](file:///docs/API_COLLECTION.json)**: Import this JSON into Postman to test all v1 endpoints.
 - **[Database Schemas](file:///docs/SCHEMAS.md)**: Detailed breakdown of Mongoose models and data relationships.
+- **[High-Level Design](file:///docs/HLD.md)**: Architectural overview and data flow.
 - **[Permissions Manual](file:///docs/PERMISSIONS.md)**: Explanation of the Role-Based Access Control (RBAC) system.
 - **[Seeding Guide](file:///docs/SEEDING_GUIDE.md)**: How to quickly populate a trip with demo data for testing.
 
@@ -29,13 +30,23 @@ All project documentation is located in the `docs/` folder. Below are the key re
 
 ## 🏗️ Technology Stack
 
-- **Frontend**: React, TypeScript, Tailwind CSS, Lucide Icons.
-- **Backend**: Node.js, Express, TypeScript, Zod.
-- **Database**: MongoDB (Mongoose).
-- **Auth**: Clerk (Clerk Express Middlewares).
-- **Storage**: AWS S3 (via LocalStack for local dev).
+**Frontend (Client)**
+- **Framework**: React.js with Vite
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS
+- **Icons & UI**: Lucide React
 
----
+**Backend (API)**
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Language**: TypeScript
+- **Validation**: Zod (for request payload validation)
+
+**Infrastructure & Services**
+- **Database**: MongoDB (via Mongoose ODM)
+- **Authentication**: Clerk (with Clerk Express Middlewares backing)
+- **Object Storage**: AWS S3 (for media files & presigned URLs)
+- **Local Dev Mocking**: LocalStack (for local S3 offline development)
 
 ## 🔐 License
 
